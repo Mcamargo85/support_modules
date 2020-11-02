@@ -8,7 +8,6 @@ setup(name='support_module',
     packages=['support'],
     install_requires=[
         'numpy',
-        'platform',
         'networkx'
     ]
 )
