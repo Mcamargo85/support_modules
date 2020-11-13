@@ -103,6 +103,7 @@ class HPC_Multiprocess():
                    '#SBATCH -t 72:00:00',
                    'module load cuda/10.0',
                    'module load python/3.6.3/virtenv',
+                   'module load java-1.8.0_40',
                    'source activate ' + self.conn['env']
                    ]
         def format_option(short, parm):
