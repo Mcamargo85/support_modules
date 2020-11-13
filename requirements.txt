@@ -1,2 +1,4 @@
 numpy
 networkx
+pm4py
+pandas
