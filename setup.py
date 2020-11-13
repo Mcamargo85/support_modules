@@ -10,5 +10,6 @@ setup(name='support_modules',
         'numpy',
         'networkx',
         'pm4py',
-        'pandas']
+        'pandas',
+        'matplotlib']
 )
