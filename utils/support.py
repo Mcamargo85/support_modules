@@ -9,6 +9,7 @@ import json
 import platform as pl
 from networkx.readwrite import json_graph
 import time
+import functools
 
 
 def folder_id():
@@ -157,7 +158,7 @@ def save_graph(graph, output_file):
         f.write(json.dumps(data))
         f.close()
 
-def timeit(method) -> dict:
+def timeit(func=None, rec_name=None) -> dict:
     """
     Decorator to measure execution times of methods
 
@@ -170,51 +171,18 @@ def timeit(method) -> dict:
     dict : execution time record
 
     """
-    def timed(*args, **kw):
+    if not func:
+        return functools.partial(timeit, rec_name=rec_name)
+    @functools.wraps(func)
+    def wrapper(*args, **kw):
         ts = time.time()
-        result = method(*args, **kw)
+        result = func(*args, **kw)
         te = time.time()
         if 'log_time' in kw:
-            name = kw.get('log_name', method.__name__.upper())
+            name = rec_name if rec_name else kw.get('log_name', func.__name__.upper())
             kw['log_time'][name] = int((te - ts) * 1000)
         else:
             print('%r  %2.2f ms' % \
-                  (method.__name__, (te - ts) * 1000))
+                  (func.__name__, (te - ts) * 1000))
         return result
-    return timed
-
-# from timeit import default_timer as timer
-# # start = timer()
-# # end = timer()
-# # print(end - start)
-
-# #%%
-# import pandas as pd
-# import json
-# from networkx.readwrite import json_graph
-
-# with open('C:/Users/Manuel Camargo/Documents/GitHub/SiMo-Discoverer/settings.json') as file:
-#     settings = json.load(file)
-#     file.close()
-
-# settings['pdef_method'] = 'apx'
-
-# with open('C:/Users/Manuel Camargo/Documents/GitHub/SiMo-Discoverer/graph.json') as file:
-#     gdata = json.load(file)
-#     file.close()
-
-# G = json_graph.node_link_graph(gdata)
-
-# rpool = data = pd.read_csv('C:/Users/Manuel Camargo/Documents/GitHub/SiMo-Discoverer/resource.csv')
-
-# data = pd.read_csv('C:/Users/Manuel Camargo/Documents/GitHub/SiMo-Discoverer/process_stats.csv')
-# data['end_timestamp'] =  pd.to_datetime(data['end_timestamp'], format=settings['read_options']['timeformat'])
-# # log['start_timestamp'] =  pd.to_datetime(log['start_timestamp'], format=parameters['timeformat'])
-# data = data.drop(columns='Unnamed: 0')
-# #%%
-# model_data = pd.DataFrame.from_dict(
-#     dict(process_graph.nodes.data()), orient='index')[['id']]
-# sup.create_json(model_data.to_dict('index'), 'id.csv')
-# sup.save_graph(process_graph, 'process_graph.json')
-# sup.create_csv_file_header(log.data, 'log_data.csv')
-# sup.create_json(settings, 'settings.json')
+    return wrapper
