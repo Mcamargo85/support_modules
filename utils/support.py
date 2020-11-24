@@ -106,7 +106,7 @@ def create_csv_file_header(index, output_file, mode='w'):
 
 def create_json(dictionary, output_file):
     with open(output_file, 'w') as f:
-         f.write(json.dumps(dictionary))
+         f.write(json.dumps(dictionary, indent=4, sort_keys=True))
          f.close()
 
 
