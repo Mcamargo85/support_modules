@@ -17,7 +17,7 @@ class LogReader(object):
     expected format .xes or .csv
     """
 
-    def __init__(self, input, settings):
+    def __init__(self, input, settings, verbose=True):
         """constructor"""
         self.input = input
         self.file_name, self.file_extension = self.define_ftype()
@@ -26,7 +26,7 @@ class LogReader(object):
         self.column_names = settings['column_names']
         self.one_timestamp = settings['one_timestamp']
         self.filter_d_attrib = settings['filter_d_attrib']
-        self.ns_include = settings['ns_include']
+        self.verbose = verbose
 
         self.data = list()
         self.raw_data = list()
@@ -67,10 +67,12 @@ class LogReader(object):
         temp_data = (temp_data[(temp_data.task != 'Start') & (temp_data.task != 'End')]
                 .reset_index(drop=True))
         self.raw_data = temp_data.to_dict('records')
-        sup.print_performed_task('Rearranging log traces ')
+        if self.verbose:
+            sup.print_performed_task('Rearranging log traces ')
         self.data = self.reorder_xes(temp_data)
         self.append_csv_start_end()
-        sup.print_done_task()
+        if self.verbose:
+            sup.print_done_task()
     
     def reorder_xes(self, temp_data):
         """
@@ -120,7 +122,8 @@ class LogReader(object):
         """
         reads and parse all the events information from a csv file
         """
-        sup.print_performed_task('Reading log traces ')
+        if self.verbose:
+            sup.print_performed_task('Reading log traces ')
         log = pd.read_csv(self.input)
         if self.one_timestamp:
             self.column_names['Complete Timestamp'] = 'end_timestamp'
@@ -149,7 +152,8 @@ class LogReader(object):
         self.data = log.to_dict('records')
         self.append_csv_start_end()
         self.split_event_transitions()
-        sup.print_done_task()
+        if self.verbose:
+            sup.print_done_task()
 
     def split_event_transitions(self):
         temp_raw = list()
@@ -266,18 +270,3 @@ class LogReader(object):
             zip_ref.extractall("../inputs/")
         _, fileExtension = os.path.splitext(outfilename)
         return outfilename, fileExtension
-
-# #%%
-# column_names = {'Case ID': 'caseid', 'Activity': 'task',
-#                 'lifecycle:transition': 'event_type', 'Resource': 'user'}
-# # Event-log reading options
-# settings = {'timeformat': '%Y-%m-%dT%H:%M:%S.%f',
-#             'column_names': column_names,
-#             'one_timestamp': False,
-#             'filter_d_attrib': True,
-#             'ns_include': True}
-
-# log = LogReader(
-#     'C:/Users/Manuel Camargo/Documents/Repositorio/experiments/sc_simo/inputs/callcentre.xes',
-#     settings)
-# print(log.data)

@@ -4,12 +4,13 @@ import matplotlib.pyplot as plt
 import utils.support as sup
 
 
-def create_process_structure(bpmn, drawing=False):
+def create_process_structure(bpmn, drawing=False, verbose=True):
     # Loading of bpmn structure into a directed graph
-    g = load_process_structure(bpmn)
+    g = load_process_structure(bpmn, verbose)
     if drawing:
         graph_network_x(g)
-    sup.print_done_task()
+    if verbose:
+        sup.print_done_task()
     return g
 
 
@@ -29,10 +30,11 @@ def find_node_num(g, id):
     return resp
 
 
-def create_nodes(g, total_elements, index, array, node_type, node_name, node_id):
+def create_nodes(g, total_elements, index, array, node_type, node_name, node_id, verbose):
     i = 0
     while i<len(array):
-        sup.print_progress(((index / (total_elements-1))* 100),'Loading of bpmn structure from file ')
+        if verbose:
+            sup.print_progress(((index / (total_elements-1))* 100),'Loading of bpmn structure from file ')
         g.add_node(index,type=node_type,name=array[i][node_name],id=array[i][node_id],
             executions=0, processing_times=list(), waiting_times=list(), multi_tasking=list(),
             temp_enable=None, temp_start=None, temp_end=None,tsk_act=False,
@@ -42,7 +44,7 @@ def create_nodes(g, total_elements, index, array, node_type, node_name, node_id)
     return index
 
 
-def load_process_structure(bpmn):
+def load_process_structure(bpmn, verbose):
     g = nx.DiGraph()
     # Loading data
     start = bpmn.get_start_event_info()
@@ -56,15 +58,15 @@ def load_process_structure(bpmn):
     total_elements = (len(tasks) + len(ex_gates) + len(inc_gates) + len(para_gates) + len(timer_events))
     #Adding nodes
     # index = create_nodes(g,total_elements,0,start,'start','start_name','start_id')
-    index = create_nodes(g, total_elements, 0, list(filter(lambda x: x['task_name']=='Start',tasks)),'start','task_name','task_id')
-    index = create_nodes(g, total_elements, index, list(filter(lambda x: x['task_name'] not in ['Start', 'End'],tasks)),'task','task_name','task_id')
-    index = create_nodes(g, total_elements, index, list(filter(lambda x: x['task_name']=='End',tasks)),'end','task_name','task_id')
-    index = create_nodes(g, total_elements, index, list(filter(lambda x: x['gate_dir']=='Diverging',ex_gates)),'gate','gate_name','gate_id')
-    index = create_nodes(g, total_elements, index, list(filter(lambda x: x['gate_dir']=='Converging',ex_gates)),'gate2','gate_name','gate_id')
-    index = create_nodes(g, total_elements, index, inc_gates,'gate2','gate_name','gate_id')
-    index = create_nodes(g, total_elements, index, para_gates,'gate3','gate_name','gate_id')
+    index = create_nodes(g, total_elements, 0, list(filter(lambda x: x['task_name']=='Start',tasks)),'start','task_name','task_id', verbose)
+    index = create_nodes(g, total_elements, index, list(filter(lambda x: x['task_name'] not in ['Start', 'End'],tasks)),'task','task_name','task_id', verbose)
+    index = create_nodes(g, total_elements, index, list(filter(lambda x: x['task_name']=='End',tasks)),'end','task_name','task_id', verbose)
+    index = create_nodes(g, total_elements, index, list(filter(lambda x: x['gate_dir']=='Diverging',ex_gates)),'gate','gate_name','gate_id', verbose)
+    index = create_nodes(g, total_elements, index, list(filter(lambda x: x['gate_dir']=='Converging',ex_gates)),'gate2','gate_name','gate_id', verbose)
+    index = create_nodes(g, total_elements, index, inc_gates,'gate2','gate_name','gate_id', verbose)
+    index = create_nodes(g, total_elements, index, para_gates,'gate3','gate_name','gate_id', verbose)
     # index = create_nodes(g, total_elements, index, end,'end','end_name','end_id')
-    index = create_nodes(g, total_elements, index, timer_events,'timer','timer_name','timer_id')
+    index = create_nodes(g, total_elements, index, timer_events,'timer','timer_name','timer_id', verbose)
     # Add edges
     for edge in bpmn.get_edges_info():
         if edge['source'] != start[0]['start_id'] and edge['target'] != end[0]['end_id']:
