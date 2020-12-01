@@ -78,6 +78,8 @@ class LogSplitter(object):
         train_cases = cases[num_test_cases:]
         df_train = self.log[self.log.caseid.isin(train_cases)]
         df_test = self.log[self.log.caseid.isin(test_cases)]
+        df_train = df_train.drop(columns=['trace_len', 'pos_trace'])
+        df_test = df_test.drop(columns=['trace_len', 'pos_trace'])
         return df_train, df_test
 
     def _random(self, size: float, one_timestamp: bool) -> None:
