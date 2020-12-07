@@ -22,7 +22,7 @@ def graph_network_x(g):
 
 
 def find_node_num(g, id):
-    resp = list(filter(lambda x: g.node[x]['id'] == id, g.nodes))
+    resp = list(filter(lambda x: g.nodes[x]['id'] == id, g.nodes))
     if len(resp) > 0:
         resp = resp[0]
     else:
@@ -72,7 +72,7 @@ def load_process_structure(bpmn, verbose):
         if edge['source'] != start[0]['start_id'] and edge['target'] != end[0]['end_id']:
             g.add_edge(find_node_num(g, edge['source']) ,find_node_num(g, edge['target']))
     # Define #of in_paths for paralell gateways_probabilities
-    para_gates = list(filter(lambda x: g.node[x]['type'] =='gate3',nx.nodes(g)))
+    para_gates = list(filter(lambda x: g.nodes[x]['type'] =='gate3',nx.nodes(g)))
     for x in para_gates:
-        g.node[x]['gt_num_paths'] = len(list(g.neighbors(x)))
+        g.nodes[x]['gt_num_paths'] = len(list(g.neighbors(x)))
     return g
