@@ -3,3 +3,5 @@ networkx
 pm4py
 pandas
 matplotlib
+jellyfish
+scipy
