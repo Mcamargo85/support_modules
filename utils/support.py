@@ -10,6 +10,7 @@ import platform as pl
 from networkx.readwrite import json_graph
 import time
 import functools
+import traceback
 
 
 def folder_id():
@@ -186,3 +187,24 @@ def timeit(func=None, rec_name=None) -> dict:
                   (func.__name__, (te - ts) * 1000))
         return result
     return wrapper
+
+def safe_exec(method):
+    """
+    Decorator to safe execute methods and return the state
+    ----------
+    method : Any method.
+    Returns
+    -------
+    dict : execution status
+    """
+    def safety_check(*args, **kw):
+        is_safe = kw.get('is_safe', method.__name__.upper())
+        if is_safe:
+            try:
+                method(*args)
+            except Exception as e:
+                print(e)
+                traceback.print_exc()
+                is_safe = False
+        return is_safe
+    return safety_check
