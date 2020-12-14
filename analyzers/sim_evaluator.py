@@ -588,7 +588,7 @@ class SimilarityEvaluator():
                 sim_hist = np.histogram(w_df[w_df.source=='sim'].rel_time, 
                                         density=True)
             if np.isnan(np.sum(log_hist[0])) or np.isnan(np.sum(sim_hist[0])):
-                similarity.append({'window': key, 'sim_score': 0})
+                similarity.append({'window': key, 'sim_score': 1})
             else:
                 similarity.append(
                     {'window': key,
