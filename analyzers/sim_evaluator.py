@@ -5,7 +5,7 @@ Created on Fri Jan 10 11:40:46 2020
 """
 import warnings
 import random
-import os
+# import os
 import itertools
 from operator import itemgetter
 
@@ -16,7 +16,7 @@ from scipy.optimize import linear_sum_assignment
 from scipy.stats import wasserstein_distance
 
 
-import utils.support as sup
+# import utils.support as sup
 from analyzers import alpha_oracle as ao
 from analyzers.alpha_oracle import Rel
 
@@ -32,7 +32,7 @@ class SimilarityEvaluator():
         self.dtype = dtype
         self.data = data
         self.rep_num = rep + 1
-        self.output = settings['output']
+        # self.output = settings['output']
         self.one_timestamp = settings['read_options']['one_timestamp']
         self._preprocess_data(dtype)
     
@@ -127,15 +127,15 @@ class SimilarityEvaluator():
         else:
             raise ValueError(metric)
 
-    def print_measures(self):
-        """
-        Prints the similarity results detail
-        """
-        print_path = os.path.join(self.output, 'sim_data', 'measures.csv')
-        if os.path.exists(print_path):
-            sup.create_csv_file(self.measures, print_path, mode='a')
-        else:
-            sup.create_csv_file_header(self.measures, print_path)
+    # def print_measures(self):
+    #     """
+    #     Prints the similarity results detail
+    #     """
+    #     print_path = os.path.join(self.output, 'sim_data', 'measures.csv')
+    #     if os.path.exists(print_path):
+    #         sup.create_csv_file(self.measures, print_path, mode='a')
+    #     else:
+    #         sup.create_csv_file_header(self.measures, print_path)
 
 # =============================================================================
 # Timed string distance
