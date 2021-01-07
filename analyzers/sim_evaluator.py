@@ -509,9 +509,11 @@ class SimilarityEvaluator():
         data = data.append(
             split_date_time(log_data, 'end_time', 'log'), ignore_index=True)
         data = data.append(
-            split_date_time(simulation_data, 'start_time', 'sim'), ignore_index=True)
+            split_date_time(simulation_data, 'start_time', 'sim'), 
+            ignore_index=True)
         data = data.append(
-            split_date_time(simulation_data, 'end_time', 'sim'), ignore_index=True)
+            split_date_time(simulation_data, 'end_time', 'sim'), 
+            ignore_index=True)
         data['weekday'] = data.apply(lambda x: x.date.weekday(), axis=1)
         g_criteria = {'hour': 'window', 'day_emd': 'weekday',
                       'day_hour_emd': ['weekday', 'window'], 'cal_emd': 'date'} 
@@ -524,16 +526,17 @@ class SimilarityEvaluator():
             w_df['rel_time'] = w_df.apply(diftime, axis=1)
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore')
-                log_hist = np.histogram(w_df[w_df.source=='log'].rel_time, density=True)
-                sim_hist = np.histogram(w_df[w_df.source=='sim'].rel_time, density=True)
+                log_hist = np.histogram(w_df[w_df.source=='log'].rel_time, 
+                                        density=True)
+                sim_hist = np.histogram(w_df[w_df.source=='sim'].rel_time, 
+                                        density=True)
             if np.isnan(np.sum(log_hist[0])) or np.isnan(np.sum(sim_hist[0])):
                 similarity.append({'window': key,
                                    'sim_score': 0})
             else:
-                similarity.append(
-                    {'window': key,
-                     'sim_score': (1 - wasserstein_distance(log_hist[0],
-                                                       sim_hist[0]))})
+                similarity.append({'window': key,
+                                   'sim_score': wasserstein_distance(
+                                       log_hist[0], sim_hist[0])})
         return similarity
 
 # =============================================================================
