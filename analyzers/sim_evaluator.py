@@ -5,22 +5,23 @@ Created on Fri Jan 10 11:40:46 2020
 """
 import warnings
 import random
-# import os
 import itertools
 from operator import itemgetter
+import time
+import multiprocessing
+from multiprocessing import Pool
+import traceback
 
-import jellyfish as jf
+from tqdm import tqdm
 import numpy as np
+import pandas as pd
+import jellyfish as jf
 from scipy.optimize import linear_sum_assignment
-
 from scipy.stats import wasserstein_distance
 
-
-# import utils.support as sup
 from analyzers import alpha_oracle as ao
 from analyzers.alpha_oracle import Rel
 
-import pandas as pd
 
 class SimilarityEvaluator():
     """
@@ -35,11 +36,11 @@ class SimilarityEvaluator():
         # self.output = settings['output']
         self.one_timestamp = settings['read_options']['one_timestamp']
         self._preprocess_data(dtype)
-    
+
     def _preprocess_data(self, dtype):
         preprocessor = self._get_preprocessor(dtype)
         return preprocessor()
-        
+
     def _get_preprocessor(self, dtype):
         if dtype == 'log':
             return self._preprocess_log
@@ -47,11 +48,12 @@ class SimilarityEvaluator():
             return self._preprocess_serie
         else:
             raise ValueError(dtype)
-            
+
     def _preprocess_log(self):
         # posible metrics tsd, dl_mae, tsd_min
         self.ramp_io_perc = 0.2
-        if ('processing_time' not in self.data.columns) or ('waiting_time' not in self.data.columns):
+        if (('processing_time' not in self.data.columns) or
+            ('waiting_time' not in self.data.columns)):
             data = self.calculate_times(self.data)
         self.data = self.scaling_data(
             data[(data.source == 'log') |
@@ -80,8 +82,8 @@ class SimilarityEvaluator():
         self.log_data = self.data[self.data.source == 'log']
         self.simulation_data = self.data[(self.data.source == 'simulation') &
                                          (self.data.run_num == self.rep_num)]
-        
-    def measure_distance(self, metric):
+
+    def measure_distance(self, metric, verbose=False):
         """
         Measures the distance of two event-logs
         with with tsd or dl and mae distance
@@ -91,57 +93,44 @@ class SimilarityEvaluator():
         distance : float
 
         """
+        self.verbose = verbose
         # similarity measurement and matching
         evaluator = self._get_evaluator(metric)
         if metric in ['day_emd', 'day_hour_emd', 'cal_emd']:
-            distance = evaluator(self.log_data, 
-                                 self.simulation_data, 
+            distance = evaluator(self.log_data,
+                                 self.simulation_data,
                                  criteria=metric)
         else:
-            distance = evaluator(self.log_data, self.simulation_data)
+            distance = evaluator(self.log_data, self.simulation_data, metric)
         self.similarity = {'run_num': self.rep_num,
                            'metric': metric,
                            'sim_val': np.mean(
                                [x['sim_score'] for x in distance])}
-        
+
 
     def _get_evaluator(self, metric):
-        if metric == 'tsd' and self.dtype == 'log':
-            return self.tsd_metric
-        elif metric == 'tsd_min' and self.dtype == 'log':
-            return self.tsd_min_pattern
-        elif metric == 'mae' and self.dtype == 'log':
-            return self.mae_metric
-        elif ((metric in ['hour_emd', 'day_emd', 'day_hour_emd', 'cal_emd'])
-              and (self.dtype == 'log')):
-            return self.log_emd_metric
-        elif metric == 'dl_mae' and self.dtype == 'log':
-            return self.dl_mae_distance
-        elif metric == 'log_mae' and self.dtype == 'log':
-            return self.log_mae_metric
-        elif metric == 'dl' and self.dtype == 'log':
-            return self.dl_distance
-        elif ((metric in ['hour_emd', 'day_emd', 'day_hour_emd', 'cal_emd'])
-              and (self.dtype == 'serie')):
-            return self.serie_emd_metric
+        if self.dtype == 'log':
+            if metric in ['tsd', 'dl', 'mae', 'dl_mae']:
+                return self._evaluate_seq_distance
+            elif metric == 'log_mae':
+                return self.log_mae_metric
+            elif metric in ['hour_emd', 'day_emd', 'day_hour_emd', 'cal_emd']:
+                return self.log_emd_metric
+            else:
+                raise ValueError(metric)
+        elif self.dtype == 'serie':
+            if metric in ['hour_emd', 'day_emd', 'day_hour_emd', 'cal_emd']:
+                return self.serie_emd_metric
+            else:
+                raise ValueError(metric)
         else:
-            raise ValueError(metric)
-
-    # def print_measures(self):
-    #     """
-    #     Prints the similarity results detail
-    #     """
-    #     print_path = os.path.join(self.output, 'sim_data', 'measures.csv')
-    #     if os.path.exists(print_path):
-    #         sup.create_csv_file(self.measures, print_path, mode='a')
-    #     else:
-    #         sup.create_csv_file_header(self.measures, print_path)
+            raise ValueError(self.dtype)
 
 # =============================================================================
 # Timed string distance
 # =============================================================================
 
-    def tsd_metric(self, log_data, simulation_data):
+    def _evaluate_seq_distance(self, log_data, simulation_data, metric):
         """
         Timed string distance calculation
 
@@ -156,328 +145,229 @@ class SimilarityEvaluator():
 
         """
         similarity = list()
-        mx_len = len(log_data)
-        cost_matrix = [[0 for c in range(mx_len)] for r in range(mx_len)]
-        # Create cost matrix
-        for i in range(0, mx_len):
-            for j in range(0, mx_len):
-                comp_sec = self.create_comparison_elements(simulation_data,
-                                                           log_data, i, j)
-                length = np.max([len(comp_sec['seqs']['s_1']),
-                                 len(comp_sec['seqs']['s_2'])])
-                distance = self.tsd_alpha(comp_sec,
-                                          self.alpha_concurrency.oracle)/length
-                cost_matrix[i][j] = distance
-        # Matching using the hungarian algorithm
+        def pbar_async(p, msg):
+            pbar = tqdm(total=reps, desc=msg)
+            processed = 0
+            while not p.ready():
+                cprocesed = (reps - p._number_left)
+                if processed < cprocesed:
+                    increment = cprocesed - processed
+                    pbar.update(n=increment)
+                    processed = cprocesed
+            time.sleep(1)
+            pbar.update(n=(reps - processed))
+            p.wait()
+            pbar.close()
+        # calculate the type of processing sequencial or parallel
+        # depending on the dataframe number of rows, 500 by default
+        if int(np.ceil(len(log_data) / 500)) == 1:
+            args = (metric, simulation_data, log_data,
+                    self.alpha_concurrency.oracle,
+                    ({'min': 0, 'max': len(simulation_data)},
+                     {'min': 0, 'max': len(log_data)}))
+            df_matrix = self._compare_traces(args)
+        else:
+            cpu_count = multiprocessing.cpu_count()
+            mx_len = len(log_data)
+            ranges = self.define_ranges(mx_len, int(np.ceil(cpu_count/2)))
+            ranges = list(itertools.product(*[ranges, ranges]))
+            reps = len(ranges)
+            pool = Pool(processes=cpu_count)
+            # Generate
+            args = [(metric, simulation_data[r[0]['min']:r[0]['max']],
+                     log_data[r[1]['min']:r[1]['max']],
+                     self.alpha_concurrency.oracle,
+                     r) for r in ranges]
+            p = pool.map_async(self._compare_traces, args)
+            if self.verbose:
+                pbar_async(p, 'evaluating '+metric+':')
+            pool.close()
+            # Save results
+            df_matrix = pd.concat(list(p.get()), axis=0, ignore_index=True)
+        df_matrix.sort_values(by=['i', 'j'], inplace=True)
+        df_matrix = df_matrix.reset_index().set_index(['i','j'])
+        if metric == 'dl_mae':
+            dl_matrix = df_matrix[['dl_distance']].unstack().to_numpy()
+            mae_matrix = df_matrix[['mae_distance']].unstack().to_numpy()
+            # MAE normalized
+            max_mae = mae_matrix.max()
+            mae_matrix = np.divide(mae_matrix, max_mae)
+            # multiple both matrixes by Beta equal to 0.5
+            dl_matrix = np.multiply(dl_matrix, 0.5)
+            mae_matrix = np.multiply(mae_matrix, 0.5)
+            # add each point in between
+            cost_matrix = np.add(dl_matrix, mae_matrix)
+        else:
+            cost_matrix = df_matrix[['distance']].unstack().to_numpy()
         row_ind, col_ind = linear_sum_assignment(np.array(cost_matrix))
         # Create response
         for idx, idy in zip(row_ind, col_ind):
             similarity.append(dict(caseid=simulation_data[idx]['caseid'],
                                    sim_order=simulation_data[idx]['profile'],
                                    log_order=log_data[idy]['profile'],
-                                   sim_score=(1-(cost_matrix[idx][idy]))))
+                                   sim_score= (cost_matrix[idx][idy]
+                                               if metric == 'mae' else
+                                               (1-(cost_matrix[idx][idy])))
+                                   )
+                              )
         return similarity
 
-    def tsd_min_pattern(self, log_data, simulation_data):
-        similarity = list()
-        temp_log_data = log_data.copy()
-        for i in range(0, len(simulation_data)):
-            comp_sec = self.create_comparison_elements(simulation_data,
-                                                       temp_log_data, i, 0)
-            min_dist = self.tsd_alpha(comp_sec, self.alpha_concurrency.oracle)
-            min_idx = 0
-            for j in range(1, len(temp_log_data)):
-                comp_sec = self.create_comparison_elements(simulation_data,
-                                                           temp_log_data, i, j)
-                sim = self.tsd_alpha(comp_sec, self.alpha_concurrency.oracle)
-                if min_dist > sim:
-                    min_dist = sim
-                    min_idx = j
-            length = np.max([len(simulation_data[i]['profile']),
-                             len(temp_log_data[min_idx]['profile'])])
-            similarity.append(dict(caseid=simulation_data[i]['caseid'],
-                                   sim_order=simulation_data[i]['profile'],
-                                   log_order=temp_log_data[min_idx]['profile'],
-                                   sim_score=(1-(min_dist/length))))
-            del temp_log_data[min_idx]
-        return similarity
+    @staticmethod
+    def _compare_traces(args):
 
-    def create_comparison_elements(self, serie1, serie2, id1, id2):
-        """
-        Creates a dictionary of the elements to compare
+        def ae_distance(et_1, et_2, st_1, st_2):
+            cicle_time_s1 = (et_1 - st_1).total_seconds()
+            cicle_time_s2 = (et_2 - st_2).total_seconds()
+            ae = np.abs(cicle_time_s1 - cicle_time_s2)
+            return ae
 
-        Parameters
-        ----------
-        serie1 : List
-        serie2 : List
-        id1 : integer
-        id2 : integer
+        def tsd_alpha(s_1, s_2, p_1, p_2, w_1, w_2, alpha_concurrency):
+            """
+            Compute the Damerau-Levenshtein distance between two given
+            strings (s_1 and s_2)
+            Parameters
+            ----------
+            comp_sec : dict
+            alpha_concurrency : dict
+            Returns
+            -------
+            Float
+            """
 
-        Returns
-        -------
-        comp_sec : dictionary of comparison elements
-
-        """
-        comp_sec = dict()
-        comp_sec['seqs'] = dict()
-        comp_sec['seqs']['s_1'] = serie1[id1]['profile']
-        comp_sec['seqs']['s_2'] = serie2[id2]['profile']
-        comp_sec['times'] = dict()
-        if self.one_timestamp:
-            comp_sec['times']['p_1'] = serie1[id1]['dur_act_norm']
-            comp_sec['times']['p_2'] = serie2[id2]['dur_act_norm']
-        else:
-            comp_sec['times']['p_1'] = serie1[id1]['proc_act_norm']
-            comp_sec['times']['p_2'] = serie2[id2]['proc_act_norm']
-            comp_sec['times']['w_1'] = serie1[id1]['wait_act_norm']
-            comp_sec['times']['w_2'] = serie2[id2]['wait_act_norm']
-        return comp_sec
-
-    def tsd_alpha(self, comp_sec, alpha_concurrency):
-        """
-        Compute the Damerau-Levenshtein distance between two given
-        strings (s_1 and s_2)
-        Parameters
-        ----------
-        comp_sec : dict
-        alpha_concurrency : dict
-        Returns
-        -------
-        Float
-        """
-        s_1 = comp_sec['seqs']['s_1']
-        s_2 = comp_sec['seqs']['s_2']
-        dist = {}
-        lenstr1 = len(s_1)
-        lenstr2 = len(s_2)
-        for i in range(-1, lenstr1+1):
-            dist[(i, -1)] = i+1
-        for j in range(-1, lenstr2+1):
-            dist[(-1, j)] = j+1
-        for i in range(0, lenstr1):
-            for j in range(0, lenstr2):
-                if s_1[i] == s_2[j]:
-                    cost = self.calculate_cost(comp_sec['times'], i, j)
+            def calculate_cost(s1_idx, s2_idx):
+                t_1 = p_1[s1_idx] + w_1[s1_idx]
+                if t_1 > 0:
+                    b_1 = (p_1[s1_idx]/t_1)
+                    cost = ((b_1*np.abs(p_2[s2_idx]-p_1[s1_idx])) +
+                            ((1 - b_1)*np.abs(w_2[s2_idx]-w_1[s1_idx])))
                 else:
-                    cost = 1
-                dist[(i, j)] = min(
-                    dist[(i-1, j)] + 1, # deletion
-                    dist[(i, j-1)] + 1, # insertion
-                    dist[(i-1, j-1)] + cost # substitution
-                    )
-                if i and j and s_1[i] == s_2[j-1] and s_1[i-1] == s_2[j]:
-                    if alpha_concurrency[(s_1[i], s_2[j])] == Rel.PARALLEL:
-                        cost = self.calculate_cost(comp_sec['times'], i, j-1)
-                    dist[(i, j)] = min(dist[(i, j)], dist[i-2, j-2] + cost)  # transposition
-        return dist[lenstr1-1, lenstr2-1]
+                    cost = 0
+                return cost
 
-    def calculate_cost(self, times, s1_idx, s2_idx):
+            dist = {}
+            lenstr1 = len(s_1)
+            lenstr2 = len(s_2)
+            for i in range(-1, lenstr1+1):
+                dist[(i, -1)] = i+1
+            for j in range(-1, lenstr2+1):
+                dist[(-1, j)] = j+1
+            for i in range(0, lenstr1):
+                for j in range(0, lenstr2):
+                    if s_1[i] == s_2[j]:
+                        cost = calculate_cost(i, j)
+                    else:
+                        cost = 1
+                    dist[(i, j)] = min(
+                        dist[(i-1, j)] + 1, # deletion
+                        dist[(i, j-1)] + 1, # insertion
+                        dist[(i-1, j-1)] + cost # substitution
+                        )
+                    if i and j and s_1[i] == s_2[j-1] and s_1[i-1] == s_2[j]:
+                        if alpha_concurrency[(s_1[i], s_2[j])] == Rel.PARALLEL:
+                            cost = calculate_cost(i, j-1)
+                        dist[(i, j)] = min(dist[(i, j)], dist[i-2, j-2] + cost)  # transposition
+            return dist[lenstr1-1, lenstr2-1]
+
+        def gen(metric, serie1, serie2, oracle, r):
+            """Reads the simulation results stats
+            Args:
+                settings (dict): Path to jar and file names
+                rep (int): repetition number
+            """
+            try:
+                df_matrix = list()
+                for i, s1_ele in enumerate(serie1):
+                    for j, s2_ele in enumerate(serie2):
+                        element = {'i': r[0]['min']+i, 'j': r[1]['min']+j}
+                        if metric in ['tsd', 'dl', 'dl_mae']:
+                            element['s_1'] = s1_ele['profile']
+                            element['s_2'] = s2_ele['profile']
+                            element['length'] = max(len(s1_ele['profile']),
+                                                    len(s2_ele['profile']))
+                        if metric == 'tsd':
+                            element['p_1'] = s1_ele['proc_act_norm']
+                            element['p_2'] = s2_ele['proc_act_norm']
+                            element['w_1'] = s1_ele['wait_act_norm']
+                            element['w_2'] = s2_ele['wait_act_norm']
+                        if metric in ['mae', 'dl_mae']:
+                            element['et_1'] = s1_ele['end_time']
+                            element['et_2'] = s2_ele['end_time']
+                            element['st_1'] = s1_ele['start_time']
+                            element['st_2'] = s2_ele['start_time']
+                        df_matrix.append(element)
+                df_matrix = pd.DataFrame(df_matrix)
+                if metric == 'tsd':
+                    df_matrix['distance'] = df_matrix.apply(
+                        lambda x: tsd_alpha(
+                            x.s_1, x.s_2, x.p_1, x.p_2, x.w_1, x.w_2,
+                                                oracle)/x.length, axis=1)
+                elif metric in 'dl':
+                    df_matrix['distance'] = df_matrix.apply(
+                        lambda x: jf.damerau_levenshtein_distance(
+                            ''.join(x.s_1),''.join(x.s_2))/x.length, axis=1)
+                elif metric == 'mae':
+                    df_matrix['distance'] = df_matrix.apply(
+                        lambda x: ae_distance(
+                            x.et_1, x.et_2, x.st_1, x.st_2), axis=1)
+                elif metric == 'dl_mae':
+                    df_matrix['dl_distance'] = df_matrix.apply(
+                        lambda x: jf.damerau_levenshtein_distance(
+                            ''.join(x.s_1),''.join(x.s_2))/x.length, axis=1)
+                    df_matrix['mae_distance'] = df_matrix.apply(
+                        lambda x: ae_distance(
+                            x.et_1, x.et_2, x.st_1, x.st_2), axis=1)
+                else:
+                    raise ValueError(metric)
+                return df_matrix
+            except Exception:
+                traceback.print_exc()
+        return gen(*args)
+
+# =============================================================================
+# whole log MAE
+# =============================================================================
+    def log_mae_metric(self, log_data: list, simulation_data: list) -> list:
         """
-        Takes two events and calculates the penalization based on mae distance
+        Measures the MAE distance between two whole logs
 
         Parameters
         ----------
-        times : dict with lists of times
-        s1_idx : integer
-        s2_idx : integer
-
+        log_data : list
+        simulation_data : list
         Returns
         -------
-        cost : float
-        """
-        if self.one_timestamp:
-            p_1 = times['p_1']
-            p_2 = times['p_2']
-            cost = np.abs(p_2[s2_idx]-p_1[s1_idx]) if p_1[s1_idx] > 0 else 0
-        else:
-            p_1 = times['p_1']
-            p_2 = times['p_2']
-            w_1 = times['w_1']
-            w_2 = times['w_2']
-            t_1 = p_1[s1_idx] + w_1[s1_idx]
-            if t_1 > 0:
-                b_1 = (p_1[s1_idx]/t_1)
-                cost = ((b_1*np.abs(p_2[s2_idx]-p_1[s1_idx])) +
-                        ((1 - b_1)*np.abs(w_2[s2_idx]-w_1[s1_idx])))
-            else:
-                cost = 0
-        return cost
-
-# =============================================================================
-# dl distance
-# =============================================================================
-
-    def dl_distance(self, log_data, simulation_data):
-        """
-        similarity score
-
-        Parameters
-        ----------
-        log_data : list of events
-        simulation_data : list simulation event log
-
-        Returns
-        -------
-        similarity : float
-
+        list
         """
         similarity = list()
-        mx_len = len(log_data)
-        dl_matrix = [[0 for c in range(mx_len)] for r in range(mx_len)]
-        # Create cost matrix
-        # start = timer()
-        for i in range(0, mx_len):
-            for j in range(0, mx_len):
-                d_l, _ = self._calculate_distances(
-                    simulation_data, log_data, i, j)
-                dl_matrix[i][j] = d_l
-        # end = timer()
-        # print(end - start)
-        dl_matrix = np.array(dl_matrix)
-        # add each point in between
-        # Matching using the hungarian algorithm
-        row_ind, col_ind = linear_sum_assignment(dl_matrix)
-        # Create response
-        for idx, idy in zip(row_ind, col_ind):
-            similarity.append(dict(caseid=simulation_data[idx]['caseid'],
-                                   sim_order=simulation_data[idx]['profile'],
-                                   log_order=log_data[idy]['profile'],
-                                   sim_score=(1-(dl_matrix[idx][idy]))))
+        log_data = pd.DataFrame(log_data)
+        simulation_data = pd.DataFrame(simulation_data)
+        log_timelapse = (log_data.end_time.max() -
+                         log_data.start_time.min()).total_seconds()
+        sim_timelapse = (simulation_data.end_time.max() -
+                         simulation_data.start_time.min()).total_seconds()
+        similarity.append({'sim_score': np.abs(sim_timelapse - log_timelapse)})
         return similarity
 
-# =============================================================================
-# dl and mae distance
-# =============================================================================
-
-    def dl_mae_distance(self, log_data, simulation_data):
-        """
-        similarity score
-
-        Parameters
-        ----------
-        log_data : list of events
-        simulation_data : list simulation event log
-
-        Returns
-        -------
-        similarity : float
-
-        """
-        similarity = list()
-        mx_len = len(log_data)
-        dl_matrix = [[0 for c in range(mx_len)] for r in range(mx_len)]
-        mae_matrix = [[0 for c in range(mx_len)] for r in range(mx_len)]
-        # Create cost matrix
-        # start = timer()
-        for i in range(0, mx_len):
-            for j in range(0, mx_len):
-                d_l, ae = self._calculate_distances(
-                    simulation_data, log_data, i, j)
-                dl_matrix[i][j] = d_l
-                mae_matrix[i][j] = ae
-        # end = timer()
-        # print(end - start)
-        dl_matrix = np.array(dl_matrix)
-        mae_matrix = np.array(mae_matrix)
-        # MAE normalized
-        max_mae = mae_matrix.max()
-        mae_matrix = np.divide(mae_matrix, max_mae)
-        # multiple both matrixes by Beta equal to 0.5
-        dl_matrix = np.multiply(dl_matrix, 0.5)
-        mae_matrix = np.multiply(mae_matrix, 0.5)
-        # add each point in between
-        cost_matrix = np.add(dl_matrix, mae_matrix)
-        # Matching using the hungarian algorithm
-        row_ind, col_ind = linear_sum_assignment(np.array(cost_matrix))
-        # Create response
-        for idx, idy in zip(row_ind, col_ind):
-            similarity.append(dict(caseid=simulation_data[idx]['caseid'],
-                                   sim_order=simulation_data[idx]['profile'],
-                                   log_order=log_data[idy]['profile'],
-                                   sim_score=(1-(cost_matrix[idx][idy]))))
-        return similarity
-
-    def _calculate_distances(self, serie1, serie2, id1, id2):
-        """
-
-
-        Parameters
-        ----------
-        serie1 : list
-        serie2 : list
-        id1 : index of the list 1
-        id2 : index of the list 2
-
-        Returns
-        -------
-        dl : float value
-        ae : absolute error value
-        """
-        length = np.max([len(serie1[id1]['profile']),
-                         len(serie2[id2]['profile'])])
-        d_l = jf.damerau_levenshtein_distance(
-            ''.join(serie1[id1]['profile']),
-            ''.join(serie2[id2]['profile']))/length
-
-        cicle_time_s1 = (
-            serie1[id1]['end_time'] - serie1[id1]['start_time']).total_seconds()
-        cicle_time_s2 = (
-            serie2[id2]['end_time'] - serie2[id2]['start_time']).total_seconds()
-        ae = np.abs(cicle_time_s1 - cicle_time_s2)
-        return d_l, ae
-
-# =============================================================================
-# mae distance
-# =============================================================================
-
-    def mae_metric(self, log_data, simulation_data):
-        """
-        Calculates the mae metric and
-
-        Parameters
-        ----------
-        log_data : TYPE
-            DESCRIPTION.
-        simulation_data : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        similarity : TYPE
-            DESCRIPTION.
-
-        """
-        similarity = list()
-        mx_len = len(log_data)
-        ae_matrix = [[0 for c in range(mx_len)] for r in range(mx_len)]
-        # Create cost matrix
-        # start = timer()
-        for i in range(0, mx_len):
-            for j in range(0, mx_len):
-                cicle_time_s1 = (simulation_data[i]['end_time'] -
-                                 simulation_data[i]['start_time']).total_seconds()
-                cicle_time_s2 = (log_data[j]['end_time'] -
-                                 log_data[j]['start_time']).total_seconds()
-                ae = np.abs(cicle_time_s1 - cicle_time_s2)
-                ae_matrix[i][j] = ae
-        # end = timer()
-        # print(end - start)
-        ae_matrix = np.array(ae_matrix)
-        # Matching using the hungarian algorithm
-        row_ind, col_ind = linear_sum_assignment(np.array(ae_matrix))
-        # Create response
-        for idx, idy in zip(row_ind, col_ind):
-            similarity.append(dict(caseid=simulation_data[idx]['caseid'],
-                                   sim_order=simulation_data[idx]['profile'],
-                                   log_order=log_data[idy]['profile'],
-                                   sim_score=(ae_matrix[idx][idy])))
-        return similarity
-    
 # =============================================================================
 # Log emd distance
 # =============================================================================
-    
-    def log_emd_metric(self, log_data, simulation_data, criteria='hour'):
+
+    def log_emd_metric(self, log_data: list,
+                       simulation_data: list, criteria='hour') -> list:
+        """
+        Measures the EMD distance between two logs on different aggregation
+        levels specified by user by defaul per hour
+
+        Parameters
+        ----------
+        log_data : list
+        simulation_data : list
+        criteria : TYPE, optional
+            DESCRIPTION. The default is 'hour'.
+        Returns
+        -------
+        list
+        """
         similarity = list()
         window = 1
         # hist_range = [0, int((window * 3600))]
@@ -492,10 +382,10 @@ class SimilarityEvaluator():
             # create time windows
             i = 0
             daily_windows = dict()
-            for x in range(24):
-                if x % window == 0:
+            for hour in range(24):
+                if hour % window == 0:
                     i += 1
-                daily_windows[x] = i
+                daily_windows[hour] = i
             dataframe = dataframe.merge(
                 pd.DataFrame.from_dict(
                     daily_windows, orient='index').rename_axis('hour'),
@@ -509,14 +399,14 @@ class SimilarityEvaluator():
         data = data.append(
             split_date_time(log_data, 'end_time', 'log'), ignore_index=True)
         data = data.append(
-            split_date_time(simulation_data, 'start_time', 'sim'), 
+            split_date_time(simulation_data, 'start_time', 'sim'),
             ignore_index=True)
         data = data.append(
-            split_date_time(simulation_data, 'end_time', 'sim'), 
+            split_date_time(simulation_data, 'end_time', 'sim'),
             ignore_index=True)
         data['weekday'] = data.apply(lambda x: x.date.weekday(), axis=1)
         g_criteria = {'hour': 'window', 'day_emd': 'weekday',
-                      'day_hour_emd': ['weekday', 'window'], 'cal_emd': 'date'} 
+                      'day_hour_emd': ['weekday', 'window'], 'cal_emd': 'date'}
         similarity = list()
         for key, group in data.groupby(g_criteria[criteria]):
             w_df = group.copy()
@@ -526,9 +416,9 @@ class SimilarityEvaluator():
             w_df['rel_time'] = w_df.apply(diftime, axis=1)
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore')
-                log_hist = np.histogram(w_df[w_df.source=='log'].rel_time, 
+                log_hist = np.histogram(w_df[w_df.source=='log'].rel_time,
                                         density=True)
-                sim_hist = np.histogram(w_df[w_df.source=='sim'].rel_time, 
+                sim_hist = np.histogram(w_df[w_df.source=='sim'].rel_time,
                                         density=True)
             if np.isnan(np.sum(log_hist[0])) or np.isnan(np.sum(sim_hist[0])):
                 similarity.append({'window': key,
@@ -542,7 +432,7 @@ class SimilarityEvaluator():
 # =============================================================================
 # serie emd distance
 # =============================================================================
-    
+
     def serie_emd_metric(self, log_data, simulation_data, criteria='hour'):
         similarity = list()
         window = 1
@@ -572,11 +462,11 @@ class SimilarityEvaluator():
             return dataframe
         data = split_date_time(log_data, 'timestamp', 'log')
         data = data.append(
-            split_date_time(simulation_data, 'timestamp', 'sim'), 
+            split_date_time(simulation_data, 'timestamp', 'sim'),
             ignore_index=True)
         data['weekday'] = data.apply(lambda x: x.date.weekday(), axis=1)
         g_criteria = {'hour': 'window', 'day_emd': 'weekday',
-                      'day_hour_emd': ['weekday', 'window'], 'cal_emd': 'date'} 
+                      'day_hour_emd': ['weekday', 'window'], 'cal_emd': 'date'}
         similarity = list()
         for key, group in data.groupby(g_criteria[criteria]):
             w_df = group.copy()
@@ -586,9 +476,9 @@ class SimilarityEvaluator():
             w_df['rel_time'] = w_df.apply(diftime, axis=1)
             with warnings.catch_warnings():
                 warnings.filterwarnings('ignore')
-                log_hist = np.histogram(w_df[w_df.source=='log'].rel_time, 
+                log_hist = np.histogram(w_df[w_df.source=='log'].rel_time,
                                         density=True)
-                sim_hist = np.histogram(w_df[w_df.source=='sim'].rel_time, 
+                sim_hist = np.histogram(w_df[w_df.source=='sim'].rel_time,
                                         density=True)
             if np.isnan(np.sum(log_hist[0])) or np.isnan(np.sum(sim_hist[0])):
                 similarity.append({'window': key, 'sim_score': 1})
@@ -598,21 +488,6 @@ class SimilarityEvaluator():
                      'sim_score': wasserstein_distance(log_hist[0],
                                                        sim_hist[0])})
         return similarity
-
-# =============================================================================
-# whole log MAE
-# =============================================================================
-    def log_mae_metric(self, log_data, simulation_data):
-        similarity = list()
-        log_data = pd.DataFrame(log_data)
-        simulation_data = pd.DataFrame(simulation_data)
-        log_timelapse = (log_data.end_time.max() - 
-                         log_data.start_time.min()).total_seconds()
-        sim_timelapse = (simulation_data.end_time.max() - 
-                         simulation_data.start_time.min()).total_seconds()
-        similarity.append({'sim_score': np.abs(sim_timelapse - log_timelapse)})
-        return similarity
-
 
 # =============================================================================
 # Support methods
@@ -666,12 +541,12 @@ class SimilarityEvaluator():
                 # is taken as instantsince there is no previous timestamp
                 # to find a range
                 dur = (events[i]['end_timestamp'] -
-                        events[i]['start_timestamp']).total_seconds()
+                       events[i]['start_timestamp']).total_seconds()
                 if i == 0:
                     wit = 0
                 else:
                     wit = (events[i]['start_timestamp'] -
-                            events[i-1]['end_timestamp']).total_seconds()
+                           events[i-1]['end_timestamp']).total_seconds()
                 events[i]['waiting_time'] = wit if wit >= 0 else 0
                 events[i]['processing_time'] = dur
         return pd.DataFrame.from_dict(log)
@@ -748,3 +623,18 @@ class SimilarityEvaluator():
                          **temp_dict}
             temp_data.append(temp_dict)
         return sorted(temp_data, key=itemgetter('start_time'))
+
+    @staticmethod
+    def define_ranges(size, num_folds):
+        num_events = int(np.round(size/num_folds))
+        folds = list()
+        for i in range(0, num_folds):
+            sidx = i * num_events
+            eidx = (i + 1) * num_events
+            if i == 0:
+                folds.append({'min': 0, 'max': eidx})
+            elif i == (num_folds - 1):
+                folds.append({'min': sidx, 'max': size})
+            else:
+                folds.append({'min': sidx, 'max': eidx})
+        return folds
