@@ -326,7 +326,7 @@ class SimilarityEvaluator():
 # =============================================================================
 # whole log MAE
 # =============================================================================
-    def log_mae_metric(self, log_data: list, simulation_data: list) -> list:
+    def log_mae_metric(self, log_data: list, simulation_data: list, metric) -> list:
         """
         Measures the MAE distance between two whole logs
 
