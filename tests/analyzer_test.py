@@ -45,6 +45,8 @@ def timeseries_test():
     print(evaluation.similarity)
     evaluation.measure_distance('cal_emd')
     print(evaluation.similarity)
+    evaluation.measure_distance('hour_emd')
+    print(evaluation.similarity)
 
 def log_test():
     parms = load_parms()

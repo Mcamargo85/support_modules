@@ -9,6 +9,6 @@ import tests.analyzer_test as ats
 import tests.timeit_tests as tit
 
 if __name__ == "__main__":
-    # ats.timeseries_test()
+    ats.timeseries_test()
     ats.log_test_2()
-    # tit.execute_tests()
+    tit.execute_tests()
