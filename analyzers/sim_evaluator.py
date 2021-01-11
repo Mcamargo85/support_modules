@@ -353,7 +353,7 @@ class SimilarityEvaluator():
 # =============================================================================
 
     def log_emd_metric(self, log_data: list,
-                       simulation_data: list, criteria='hour') -> list:
+                       simulation_data: list, criteria='hour_emd') -> list:
         """
         Measures the EMD distance between two logs on different aggregation
         levels specified by user by defaul per hour
@@ -405,7 +405,7 @@ class SimilarityEvaluator():
             split_date_time(simulation_data, 'end_time', 'sim'),
             ignore_index=True)
         data['weekday'] = data.apply(lambda x: x.date.weekday(), axis=1)
-        g_criteria = {'hour': 'window', 'day_emd': 'weekday',
+        g_criteria = {'hour_emd': 'window', 'day_emd': 'weekday',
                       'day_hour_emd': ['weekday', 'window'], 'cal_emd': 'date'}
         similarity = list()
         for key, group in data.groupby(g_criteria[criteria]):
@@ -433,7 +433,7 @@ class SimilarityEvaluator():
 # serie emd distance
 # =============================================================================
 
-    def serie_emd_metric(self, log_data, simulation_data, criteria='hour'):
+    def serie_emd_metric(self, log_data, simulation_data, criteria='hour_emd'):
         similarity = list()
         window = 1
         log_data = pd.DataFrame(log_data)
@@ -465,7 +465,7 @@ class SimilarityEvaluator():
             split_date_time(simulation_data, 'timestamp', 'sim'),
             ignore_index=True)
         data['weekday'] = data.apply(lambda x: x.date.weekday(), axis=1)
-        g_criteria = {'hour': 'window', 'day_emd': 'weekday',
+        g_criteria = {'hour_emd': 'window', 'day_emd': 'weekday',
                       'day_hour_emd': ['weekday', 'window'], 'cal_emd': 'date'}
         similarity = list()
         for key, group in data.groupby(g_criteria[criteria]):
