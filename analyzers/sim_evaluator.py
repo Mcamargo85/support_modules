@@ -11,6 +11,7 @@ import time
 import multiprocessing
 from multiprocessing import Pool
 import traceback
+import string
 
 from tqdm import tqdm
 import numpy as np
@@ -28,12 +29,12 @@ class SimilarityEvaluator():
         This class evaluates the similarity of two event-logs
      """
 
-    def __init__(self, data, settings, rep, dtype='log'):
+    def __init__(self, data, settings, rep, max_cases=500, dtype='log'):
         """constructor"""
         self.dtype = dtype
         self.data = data
         self.rep_num = rep + 1
-        # self.output = settings['output']
+        self.max_cases = max_cases
         self.one_timestamp = settings['read_options']['one_timestamp']
         self._preprocess_data(dtype)
 
@@ -158,9 +159,9 @@ class SimilarityEvaluator():
             pbar.update(n=(reps - processed))
             p.wait()
             pbar.close()
-        # calculate the type of processing sequencial or parallel
-        # depending on the dataframe number of rows, 500 by default
-        if int(np.ceil(len(log_data) / 500)) == 1:
+        # define the type of processing sequencial or parallel
+        cases = len(set([x['caseid'] for x in log_data]))
+        if cases <= self.max_cases:
             args = (metric, simulation_data, log_data,
                     self.alpha_concurrency.oracle,
                     ({'min': 0, 'max': len(simulation_data)},
@@ -514,7 +515,8 @@ class SimilarityEvaluator():
             task_list = [x[features] for x in data]
         [subsec_set.add(x) for x in task_list]
         variables = sorted(list(subsec_set))
-        characters = [chr(i) for i in range(0, len(variables))]
+        characters = string.ascii_letters+string.digits
+        # characters = [chr(i) for i in range(0, len(variables))]
         aliases = random.sample(characters, len(variables))
         alias = dict()
         for i, _ in enumerate(variables):

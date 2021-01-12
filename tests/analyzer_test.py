@@ -45,8 +45,6 @@ def timeseries_test():
     print(evaluation.similarity)
     evaluation.measure_distance('cal_emd')
     print(evaluation.similarity)
-    evaluation.measure_distance('hour_emd')
-    print(evaluation.similarity)
 
 def log_test():
     parms = load_parms()
@@ -67,7 +65,7 @@ def log_test():
     event_log_2['source'] = 'simulation'
     event_log = pd.concat([event_log, event_log_2], axis=0, ignore_index=True)
     event_log['run_num'] = 1
-    evaluation = sim.SimilarityEvaluator(event_log, parms, 0)
+    evaluation = sim.SimilarityEvaluator(event_log, parms, 0, max_cases=100)
     measure(evaluation)
 
 def log_test_2():
