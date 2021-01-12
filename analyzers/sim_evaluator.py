@@ -55,11 +55,11 @@ class SimilarityEvaluator():
         self.ramp_io_perc = 0.2
         if (('processing_time' not in self.data.columns) or
             ('waiting_time' not in self.data.columns)):
-            data = self.calculate_times(self.data)
+            self.data = self.calculate_times(self.data)
         self.data = self.scaling_data(
-            data[(data.source == 'log') |
-                 ((data.source == 'simulation') &
-                  (data.run_num == self.rep_num))])
+            self.data[(self.data.source == 'log') |
+                      ((self.data.source == 'simulation') &
+                       (self.data.run_num == self.rep_num))])
         # load data
         self.log_data = self.data[self.data.source == 'log']
         self.simulation_data = self.data[(self.data.source == 'simulation') &
