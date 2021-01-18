@@ -9,6 +9,7 @@ import itertools
 from operator import itemgetter
 import numpy as np
 import pandas as pd
+import random
 
 
 class LogSplitter(object):
@@ -83,7 +84,11 @@ class LogSplitter(object):
         return df_train, df_test
 
     def _random(self, size: float, one_timestamp: bool) -> None:
-        df_train, df_test = list(), list()
+        cases = list(self.log.caseid.unique())
+        sample_sz = int(np.ceil(len(cases)*size))
+        scases = random.sample(cases, sample_sz)
+        df_train = self.log[self.log.caseid.isin(scases)]
+        df_test = self.log[~self.log.caseid.isin(scases)]
         return df_train, df_test
 
     def _sort_log(self):
