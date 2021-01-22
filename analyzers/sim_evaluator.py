@@ -29,11 +29,11 @@ class SimilarityEvaluator():
         This class evaluates the similarity of two event-logs
      """
 
-    def __init__(self, data, settings, rep, max_cases=500, dtype='log'):
+    def __init__(self, log_data, simulation_data, settings, max_cases=500, dtype='log'):
         """constructor"""
         self.dtype = dtype
-        self.data = data
-        self.rep_num = rep + 1
+        self.log_data = log_data
+        self.simulation_data = simulation_data
         self.max_cases = max_cases
         self.one_timestamp = settings['read_options']['one_timestamp']
         self._preprocess_data(dtype)
@@ -51,20 +51,19 @@ class SimilarityEvaluator():
             raise ValueError(dtype)
 
     def _preprocess_log(self):
-        # posible metrics tsd, dl_mae, tsd_min
         self.ramp_io_perc = 0.2
-        if (('processing_time' not in self.data.columns) or
-            ('waiting_time' not in self.data.columns)):
-            self.data = self.calculate_times(self.data)
-        self.data = self.scaling_data(
-            self.data[(self.data.source == 'log') |
-                      ((self.data.source == 'simulation') &
-                       (self.data.run_num == self.rep_num))])
-        # load data
-        self.log_data = self.data[self.data.source == 'log']
-        self.simulation_data = self.data[(self.data.source == 'simulation') &
-                                         (self.data.run_num == self.rep_num)]
-        self.alias = self.create_task_alias('task')
+        self.log_data['source'] = 'log'
+        self.simulation_data['source'] = 'simulation'
+        data = pd.concat([self.log_data, self.simulation_data], 
+                         axis=0, ignore_index=True)
+        if (('processing_time' not in data.columns) or
+            ('waiting_time' not in data.columns)):
+            data = self.calculate_times(data)
+        data = self.scaling_data(data)
+        # save data
+        self.log_data = data[data.source == 'log']
+        self.simulation_data = data[data.source == 'simulation']
+        self.alias = self.create_task_alias(data, 'task')
 
         self.alpha_concurrency = ao.AlphaOracle(self.log_data,
                                                 self.alias,
@@ -80,9 +79,8 @@ class SimilarityEvaluator():
 
     def _preprocess_serie(self):
         # load data
-        self.log_data = self.data[self.data.source == 'log']
-        self.simulation_data = self.data[(self.data.source == 'simulation') &
-                                         (self.data.run_num == self.rep_num)]
+        self.log_data['source'] = 'log'
+        self.simulation_data['source'] = 'simulation'
 
     def measure_distance(self, metric, verbose=False):
         """
@@ -103,8 +101,7 @@ class SimilarityEvaluator():
                                  criteria=metric)
         else:
             distance = evaluator(self.log_data, self.simulation_data, metric)
-        self.similarity = {'run_num': self.rep_num,
-                           'metric': metric,
+        self.similarity = {'metric': metric,
                            'sim_val': np.mean(
                                [x['sim_score'] for x in distance])}
 
@@ -494,7 +491,7 @@ class SimilarityEvaluator():
 # Support methods
 # =============================================================================
 
-    def create_task_alias(self, features):
+    def create_task_alias(self, data, features):
         """
         Create string alias for tasks names or tuples of tasks-roles names
 
@@ -507,7 +504,7 @@ class SimilarityEvaluator():
         alias : alias dictionary
 
         """
-        data = self.data.to_dict('records')
+        data = data.to_dict('records')
         subsec_set = set()
         if isinstance(features, list):
             task_list = [(x[features[0]], x[features[1]]) for x in data]
