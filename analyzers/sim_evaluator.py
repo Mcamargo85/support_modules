@@ -12,6 +12,7 @@ import multiprocessing
 from multiprocessing import Pool
 import traceback
 import string
+import copy
 
 from tqdm import tqdm
 import numpy as np
@@ -32,8 +33,8 @@ class SimilarityEvaluator():
     def __init__(self, log_data, simulation_data, settings, max_cases=500, dtype='log'):
         """constructor"""
         self.dtype = dtype
-        self.log_data = log_data
-        self.simulation_data = simulation_data
+        self.log_data = copy.deepcopy(log_data)
+        self.simulation_data = copy.deepcopy(simulation_data)
         self.max_cases = max_cases
         self.one_timestamp = settings['read_options']['one_timestamp']
         self._preprocess_data(dtype)
