@@ -114,7 +114,8 @@ class HPC_Multiprocess():
         options = 'python '+self.conn['script']
         for k, v in job.get_args().items():
             options += format_option(k, v)
-        options += format_option('o', self.output_folder)
+        if self.output_folder:
+            options += format_option('o', self.output_folder) 
         # options += ' -a training'
         default.append(options)
         file_name = os.path.join(self.jobs_folder, sup.folder_id())
