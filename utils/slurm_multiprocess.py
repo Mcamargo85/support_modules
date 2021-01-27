@@ -181,7 +181,7 @@ class HPC_Multiprocess():
                     job.set_worker(worker_id)
                     job.set_status(St.SUBMITTED)
             # [print('QUEUE', job.get_id(), job.get_status(), job.get_worker(), sep=' ') for job in self.queue]
-            print('Queue:', len(self.queue),'Completed:',len(completed), sep=' ')
+            # print('Queue:', len(self.queue),'Completed:',len(completed), sep=' ')
             time.sleep(self.timeout)
         # [print('COMP', job, sep=' ') for job in completed]
 # =============================================================================
