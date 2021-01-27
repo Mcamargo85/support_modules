@@ -99,6 +99,7 @@ class HPC_Multiprocess():
                    '#SBATCH -J '+ exp_name,
                    '#SBATCH --output='+('"'+os.path.join(self.stdout_folder,'slurm-%j.out'+'"')),
                    '#SBATCH -N 1',
+                   '#SBATCH --cpus-per-task='+self.conn['cpus'],
                    '#SBATCH --mem='+self.conn['mem'],
                    '#SBATCH -t 72:00:00',
                    'module load cuda/10.0',
