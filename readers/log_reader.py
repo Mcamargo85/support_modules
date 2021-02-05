@@ -51,6 +51,10 @@ class LogReader(object):
 
     def get_xes_events_data(self):
         log = pm4py.read_xes(self.input)
+        try:
+            source = log.attributes['source']
+        except:
+            source = ''
         flattern_log = ([{**event, 
                             **{'caseid': trace.attributes['concept:name']}} 
                            for trace in log for event in trace])
@@ -64,8 +68,16 @@ class LogReader(object):
             'lifecycle:transition': 'event_type',
             'org:resource': 'user',
             'time:timestamp': 'timestamp'}, inplace=True)
-        temp_data = (temp_data[(temp_data.task != 'Start') & (temp_data.task != 'End')]
-                .reset_index(drop=True))
+        temp_data = (temp_data[~temp_data.task.isin(
+            ['Start','End', 'start', 'end'])].reset_index(drop=True))
+        temp_data = (
+            temp_data[temp_data.event_type.isin(['start', 'complete'])]
+            .reset_index(drop=True))
+        if source == 'com.qbpsimulator':
+            temp_data['etype'] = temp_data.apply(
+                lambda x: x.elementId.split('_')[0], axis=1)
+            temp_data = (
+                temp_data[temp_data.etype=='Task'].reset_index(drop=True))
         self.raw_data = temp_data.to_dict('records')
         if self.verbose:
             sup.print_performed_task('Rearranging log traces ')
