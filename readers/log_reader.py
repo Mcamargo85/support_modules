@@ -74,10 +74,11 @@ class LogReader(object):
             temp_data[temp_data.event_type.isin(['start', 'complete'])]
             .reset_index(drop=True))
         if source == 'com.qbpsimulator':
-            temp_data['etype'] = temp_data.apply(
-                lambda x: x.elementId.split('_')[0], axis=1)
-            temp_data = (
-                temp_data[temp_data.etype=='Task'].reset_index(drop=True))
+            if len(temp_data.iloc[0].elementId.split('_'))>1: 
+                temp_data['etype'] = temp_data.apply(
+                    lambda x: x.elementId.split('_')[0], axis=1)
+                temp_data = (
+                    temp_data[temp_data.etype=='Task'].reset_index(drop=True))
         self.raw_data = temp_data.to_dict('records')
         if self.verbose:
             sup.print_performed_task('Rearranging log traces ')
