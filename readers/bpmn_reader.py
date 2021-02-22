@@ -92,9 +92,12 @@ class BpmnReader(object):
         values = list()
         for process in self.root.findall('xmlns:process',self.ns):
             for sequence in process.findall('xmlns:sequenceFlow',self.ns):
+                sf_id = sequence.get('id')
                 source = sequence.get('sourceRef')
                 target = sequence.get('targetRef')
-                values.append(dict(source=source,target=target))
+                values.append(dict(sf_id=sf_id,
+                                   source=source,
+                                   target=target))
         return values
 
     def find_sequence_id(self, source, target):
