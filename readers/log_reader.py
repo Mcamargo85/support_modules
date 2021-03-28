@@ -7,6 +7,7 @@ import pm4py
 
 import pandas as pd
 from operator import itemgetter
+from datetime import datetime, timedelta
 
 import utils.support as sup
 
@@ -189,11 +190,12 @@ class LogReader(object):
         self.raw_data = temp_raw
 
     def append_csv_start_end(self):
-        temp_data = pd.DataFrame(self.data)
         end_start_times = dict()
-        for case, group in temp_data.groupby('caseid'):
-            end_start_times[(case, 'Start')] = group.start_timestamp.min()
-            end_start_times[(case, 'End')] = group.end_timestamp.max()
+        for case, group in pd.DataFrame(self.data).groupby('caseid'):
+            end_start_times[(case, 'Start')] = (
+                group.start_timestamp.min()-timedelta(microseconds=1))
+            end_start_times[(case, 'End')] = (
+                group.end_timestamp.max()+timedelta(microseconds=1))
         new_data = list()
         data = sorted(self.data, key=lambda x: x['caseid'])
         for key, group in it.groupby(data, key=lambda x: x['caseid']):
