@@ -124,8 +124,6 @@ class LogReader(object):
                             break
                 if not incomplete:
                     ordered_event_log.extend(temp_trace)
-                    
-                
         return ordered_event_log
 
 # =============================================================================
@@ -191,22 +189,24 @@ class LogReader(object):
         self.raw_data = temp_raw
 
     def append_csv_start_end(self):
+        temp_data = pd.DataFrame(self.data)
+        end_start_times = dict()
+        for case, group in temp_data.groupby('caseid'):
+            end_start_times[(case, 'Start')] = group.start_timestamp.min()
+            end_start_times[(case, 'End')] = group.end_timestamp.max()
         new_data = list()
         data = sorted(self.data, key=lambda x: x['caseid'])
         for key, group in it.groupby(data, key=lambda x: x['caseid']):
             trace = list(group)
             for new_event in ['Start', 'End']:
                 idx = 0 if new_event == 'Start' else -1
-                t_key = 'end_timestamp'
-                if not self.one_timestamp and new_event == 'Start':
-                    t_key = 'start_timestamp'
                 temp_event = dict()
                 temp_event['caseid'] = trace[idx]['caseid']
                 temp_event['task'] = new_event
                 temp_event['user'] = new_event
-                temp_event['end_timestamp'] = trace[idx][t_key]
+                temp_event['end_timestamp'] = end_start_times[(key, new_event)]
                 if not self.one_timestamp:
-                    temp_event['start_timestamp'] = trace[idx][t_key]
+                    temp_event['start_timestamp'] = end_start_times[(key, new_event)]
                 if new_event == 'Start':
                     trace.insert(0, temp_event)
                 else:
