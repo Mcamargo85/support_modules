@@ -18,7 +18,6 @@ def read_log_test():
                 'one_timestamp': False,
                 'filter_d_attrib': True}
     
-    log = lr.LogReader(os.path.join('tests', 'fixtures', 'repairExample_modified.xes'),
+    log = lr.LogReader(os.path.join('tests', 'fixtures', 'Production.xes'),
                         settings)
     df = pd.DataFrame(log.data)
-    print(df[df.caseid=='1'])

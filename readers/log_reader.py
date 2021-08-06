@@ -43,8 +43,6 @@ class LogReader(object):
             self.get_xes_events_data()
         elif self.file_extension == '.csv':
             self.get_csv_events_data()
-        # elif self.file_extension == '.mxml':
-        #     self.data, self.raw_data = self.get_mxml_events_data()
 
 # =============================================================================
 # xes methods
@@ -84,6 +82,9 @@ class LogReader(object):
         if self.verbose:
             sup.print_performed_task('Rearranging log traces ')
         self.data = self.reorder_xes(temp_data)
+        self.data = pd.DataFrame(self.data)
+        self.data.drop_duplicates(inplace=True)
+        self.data = self.data.to_dict('records')
         self.append_csv_start_end()
         if self.verbose:
             sup.print_done_task()
