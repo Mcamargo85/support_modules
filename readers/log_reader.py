@@ -77,7 +77,7 @@ class LogReader(object):
                 temp_data['etype'] = temp_data.apply(
                     lambda x: x.elementId.split('_')[0], axis=1)
                 temp_data = (
-                    temp_data[temp_data.etype=='Task'].reset_index(drop=True))
+                    temp_data[temp_data.etype.isin(['Task', 'Activity'])].reset_index(drop=True))
         self.raw_data = temp_data.to_dict('records')
         if self.verbose:
             sup.print_performed_task('Rearranging log traces ')
