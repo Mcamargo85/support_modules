@@ -102,6 +102,41 @@ class HPC_Multiprocess():
                    '#SBATCH --cpus-per-task='+self.conn['cpus'],
                    '#SBATCH --mem='+self.conn['mem'],
                    '#SBATCH -t 72:00:00',
+                   '#SBATCH	--mail-user=df.baron10@uniandes.edu.co',
+                   '#SBATCH	--mail-type=ALL',
+                   'module load anaconda/python3.9',
+                   'module load java/1.8.0_311',
+                   'source deactivate',
+                   'source activate ' + self.conn['env']
+                   ]
+        def format_option(short, parm):
+            return (' -'+short+' None'
+                    if parm in [None, 'nan', '', np.nan]
+                    else ' -'+short+' '+str(parm))
+
+        options = 'python '+self.conn['script']
+        for k, v in job.get_args().items():
+            options += format_option(k, v)
+        if self.output_folder:
+            options += format_option('o', self.output_folder) 
+        # options += ' -a training'
+        default.append(options)
+        file_name = os.path.join(self.jobs_folder, sup.folder_id())
+        sup.create_text_file(default, file_name)
+        return self.submit_job(file_name)
+
+    """
+    def create_worker(self, job_id):
+        job = Job.find_by_id(job_id)
+        exp_name = 'worker'
+        default = ['#!/bin/bash',
+                   '#SBATCH --partition='+self.conn['partition'],
+                   '#SBATCH -J '+ exp_name,
+                   '#SBATCH --output='+('"'+os.path.join(self.stdout_folder,'slurm-%j.out'+'"')),
+                   '#SBATCH -N 1',
+                   '#SBATCH --cpus-per-task='+self.conn['cpus'],
+                   '#SBATCH --mem='+self.conn['mem'],
+                   '#SBATCH -t 72:00:00',
                    'module load cuda/10.0',
                    'module load python/3.6.3/virtenv',
                    'module load java-1.8.0_40',
@@ -123,6 +158,7 @@ class HPC_Multiprocess():
         file_name = os.path.join(self.jobs_folder, sup.folder_id())
         sup.create_text_file(default, file_name)
         return self.submit_job(file_name)
+    """
 
     @staticmethod
     def submit_job(file):
