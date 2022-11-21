@@ -90,7 +90,7 @@ class HPC_Multiprocess():
 # =============================================================================
 # Create worker
 # =============================================================================
-"""
+    """
     def create_worker(self, job_id):
         job = Job.find_by_id(job_id)
         exp_name = 'worker'
@@ -123,26 +123,26 @@ class HPC_Multiprocess():
         default.append(options)
         file_name = os.path.join(self.jobs_folder, sup.folder_id())
         sup.create_text_file(default, file_name)
-        return self.submit_job(file_name)
+        return self.submit_job(file_name)"""
 
-    """
     def create_worker(self, job_id):
         job = Job.find_by_id(job_id)
         exp_name = 'worker'
         default = ['#!/bin/bash',
-                   '#SBATCH --partition='+self.conn['partition'],
-                   '#SBATCH -J '+ exp_name,
-                   '#SBATCH --output='+('"'+os.path.join(self.stdout_folder,'slurm-%j.out'+'"')),
-                   '#SBATCH -N 1',
-                   '#SBATCH --cpus-per-task='+self.conn['cpus'],
-                   '#SBATCH --mem='+self.conn['mem'],
-                   '#SBATCH -t 72:00:00',
-                   'module load cuda/10.0',
-                   'module load python/3.6.3/virtenv',
-                   'module load java-1.8.0_40',
-                   'source deactivate',
-                   'source activate ' + self.conn['env']
-                   ]
+                '#SBATCH --partition='+self.conn['partition'],
+                '#SBATCH -J '+ exp_name,
+                '#SBATCH --output='+('"'+os.path.join(self.stdout_folder,'slurm-%j.out'+'"')),
+                '#SBATCH -N 1',
+                '#SBATCH --cpus-per-task='+self.conn['cpus'],
+                '#SBATCH --mem='+self.conn['mem'],
+                '#SBATCH -t 72:00:00',
+                'module load cuda/10.0',
+                'module load python/3.6.3/virtenv',
+                'module load java-1.8.0_40',
+                'source deactivate',
+                'source activate ' + self.conn['env']
+                ]
+
         def format_option(short, parm):
             return (' -'+short+' None'
                     if parm in [None, 'nan', '', np.nan]
