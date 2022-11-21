@@ -90,7 +90,7 @@ class HPC_Multiprocess():
 # =============================================================================
 # Create worker
 # =============================================================================
-
+"""
     def create_worker(self, job_id):
         job = Job.find_by_id(job_id)
         exp_name = 'worker'
@@ -158,7 +158,6 @@ class HPC_Multiprocess():
         file_name = os.path.join(self.jobs_folder, sup.folder_id())
         sup.create_text_file(default, file_name)
         return self.submit_job(file_name)
-    """
 
     @staticmethod
     def submit_job(file):
