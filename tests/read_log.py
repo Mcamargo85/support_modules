@@ -18,6 +18,5 @@ def read_log_test():
                 'one_timestamp': False,
                 'filter_d_attrib': True}
     
-    log = lr.LogReader(os.path.join('tests', 'fixtures', 'Production.xes'),
-                        settings)
+    log = lr.LogReader(os.path.join('tests', 'fixtures', 'PurchasingExample.xes'), settings)
     df = pd.DataFrame(log.data)

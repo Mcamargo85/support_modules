@@ -49,26 +49,19 @@ class LogReader(object):
 # =============================================================================
 
     def get_xes_events_data(self):
-        log = pm4py.read_xes(self.input)
+        temp_data = pm4py.read_xes(self.input)
         try:
-            source = log.attributes['source']
+            source = temp_data.attributes['source']
         except:
             source = ''
-        flattern_log = ([{**event, 
-                            **{'caseid': trace.attributes['concept:name']}} 
-                           for trace in log for event in trace])
-        temp_data = pd.DataFrame(flattern_log)
-        temp_data['time:timestamp'] = temp_data.apply(
-            lambda x: x['time:timestamp'].strftime(self.timeformat), axis=1)
-        temp_data['time:timestamp'] = pd.to_datetime(temp_data['time:timestamp'], 
-                                                format=self.timeformat)
         temp_data.rename(columns={
+            'case:concept:name': 'caseid',
             'concept:name': 'task',
             'lifecycle:transition': 'event_type',
             'org:resource': 'user',
             'time:timestamp': 'timestamp'}, inplace=True)
         temp_data = (temp_data[~temp_data.task.isin(
-            ['Start','End', 'start', 'end'])].reset_index(drop=True))
+            ['Start', 'End', 'start', 'end'])].reset_index(drop=True))
         temp_data = (
             temp_data[temp_data.event_type.isin(['start', 'complete'])]
             .reset_index(drop=True))
