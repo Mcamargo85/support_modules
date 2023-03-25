@@ -14,8 +14,8 @@ import numpy as np
 import shutil
 from collections import defaultdict
 
-
 from enum import Enum
+
 
 # =============================================================================
 # Job object
@@ -27,6 +27,7 @@ class St(Enum):
     STARTED = 4
     COMPLETED = 5
     CANCELLED = 6
+
 
 class Job():
     id_index = defaultdict(list)
@@ -64,12 +65,14 @@ class Job():
     def find_by_id(cls, id):
         return Job.id_index[id][0]
 
+
 # =============================================================================
 #  Jobs controller
 # =============================================================================
-class HPC_Multiprocess():
+class HPC_Multiprocess:
     def __init__(self, conn, args, control_output, output_folder, workers_num, timeout=1):
         """constructor"""
+        self.queue = None
         self.jobs_folder = os.path.join(control_output, 'mp_jobs_files')
         self.stdout_folder = os.path.join(control_output, 'stdout')
         self.output_folder = output_folder
@@ -83,77 +86,40 @@ class HPC_Multiprocess():
         self.clean_folder(self.stdout_folder)
         # create queue
         self.queue = [Job(arg) for arg in self.args]
-        self.mannage_queue()
+        self.manage_queue()
         shutil.rmtree(self.jobs_folder)
         shutil.rmtree(self.stdout_folder)
 
-# =============================================================================
-# Create worker
-# =============================================================================
-    """
+    # =============================================================================
+    # Create worker
+    # =============================================================================
+
     def create_worker(self, job_id):
         job = Job.find_by_id(job_id)
         exp_name = 'worker'
         default = ['#!/bin/bash',
-                   '#SBATCH --partition='+self.conn['partition'],
-                   '#SBATCH -J '+ exp_name,
-                   '#SBATCH --output='+('"'+os.path.join(self.stdout_folder,'slurm-%j.out'+'"')),
+                   '#SBATCH --partition=' + self.conn['partition'],
+                   '#SBATCH -J ' + exp_name,
+                   '#SBATCH --output=' + ('"' + os.path.join(self.stdout_folder, 'slurm-%j.out' + '"')),
                    '#SBATCH -N 1',
-                   '#SBATCH --cpus-per-task='+self.conn['cpus'],
-                   '#SBATCH --mem='+self.conn['mem'],
+                   '#SBATCH --cpus-per-task=' + self.conn['cpus'],
+                   '#SBATCH --mem=' + self.conn['mem'],
                    '#SBATCH -t 72:00:00',
-                   '#SBATCH	--mail-user=df.baron10@uniandes.edu.co',
-                   '#SBATCH	--mail-type=ALL',
-                   'module load anaconda/python3.9',
-                   'module load java/1.8.0_311',
-                   'source deactivate',
-                   'source activate ' + self.conn['env']
+                   'module load any/python/3.8.3-conda',
+                   'module load any/java/1.8.0_265',
+                   'module load cuda/10.0',
+                   'conda deactivate',
+                   'conda activate ' + self.conn['env']
                    ]
-        def format_option(short, parm):
-            return (' -'+short+' None'
-                    if parm in [None, 'nan', '', np.nan]
-                    else ' -'+short+' '+str(parm))
 
-        options = 'python '+self.conn['script']
+        def format_option(short, parm):
+            return ' -' + short + ' None' if parm in [None, 'nan', '', np.nan] else ' -' + short + ' ' + str(parm)
+
+        options = 'python ' + self.conn['script']
         for k, v in job.get_args().items():
             options += format_option(k, v)
         if self.output_folder:
-            options += format_option('o', self.output_folder) 
-        # options += ' -a training'
-        default.append(options)
-        file_name = os.path.join(self.jobs_folder, sup.folder_id())
-        sup.create_text_file(default, file_name)
-        return self.submit_job(file_name)"""
-
-    def create_worker(self, job_id):
-        job = Job.find_by_id(job_id)
-        exp_name = 'worker'
-        default = ['#!/bin/bash',
-                '#SBATCH --partition='+self.conn['partition'],
-                '#SBATCH -J '+ exp_name,
-                '#SBATCH --output='+('"'+os.path.join(self.stdout_folder,'slurm-%j.out'+'"')),
-                '#SBATCH -N 1',
-                '#SBATCH --cpus-per-task='+self.conn['cpus'],
-                '#SBATCH --mem='+self.conn['mem'],
-                '#SBATCH -t 72:00:00',
-                'module load any/python/3.8.3-conda',
-                'module load any/java/1.8.0_265',
-                'module load cuda/10.0',
-                'conda deactivate',
-                'conda activate ' + self.conn['env']
-                ]
-
-        def format_option(short, parm):
-            return (' -'+short+' None'
-                    if parm in [None, 'nan', '', np.nan]
-                    else ' -'+short+' '+str(parm))
-
-        options = 'python '+self.conn['script']
-        for k, v in job.get_args().items():
-            options += format_option(k, v)
-        if self.output_folder:
-            options += format_option('o', self.output_folder) 
-        # options += ' -a training'
+            options += format_option('o', self.output_folder)
         default.append(options)
         file_name = os.path.join(self.jobs_folder, sup.folder_id())
         sup.create_text_file(default, file_name)
@@ -164,14 +130,14 @@ class HPC_Multiprocess():
         print(" -- submit batches --")
         args = ['sbatch', file]
         output = subprocess.run(args, capture_output=True).stdout
-        prog = re.compile('(\d+)')
+        prog = re.compile(r'(\d+)')
         results = prog.findall(output.decode("utf-8"))
         return results[0]
 
     def update_status(self):
         active_jobs = [job for job in self.queue if job.get_status() != St.HOLDING]
         for job in active_jobs:
-            stdout_path = os.path.join(self.stdout_folder,'slurm-'+ job.get_worker() +'.out')
+            stdout_path = os.path.join(self.stdout_folder, 'slurm-' + job.get_worker() + '.out')
             if job.get_status() == St.SUBMITTED:
                 if os.path.exists(stdout_path):
                     job.set_status(St.PENDING)
@@ -186,8 +152,7 @@ class HPC_Multiprocess():
                 if ('CANCELLED' in last_line) or ('Error' in last_line):
                     job.set_status(St.CANCELLED)
 
-    def mannage_queue(self):
-        completed = list()
+    def manage_queue(self):
         occupied_workers = 0
         completed = list()
         while self.queue:
@@ -196,18 +161,14 @@ class HPC_Multiprocess():
             # Check cancelled jobs
             cancelled = [job for job in self.queue if job.get_status() == St.CANCELLED]
             if cancelled:
-                raise Exception('Subprocesses interrupted: '+', '.join(
-                                                [job.get_id() for job in cancelled]))
+                raise Exception('Subprocesses interrupted: ' + ', '.join([job.get_id() for job in cancelled]))
             # Check completed jobs
             completed.extend([job.get_worker() for job in self.queue if job.get_status() == St.COMPLETED])
             # Update queue
-            self.queue = [
-                job for job in self.queue if job.get_status() not in [St.COMPLETED,
-                                                                St.CANCELLED]]
-            occupied_workers = len([
-                job for job in self.queue if job.get_status() not in [St.COMPLETED,
-                                                                St.HOLDING,
-                                                                St.CANCELLED]])
+            self.queue = [job for job in self.queue if job.get_status() not in [St.COMPLETED, St.CANCELLED]]
+            occupied_workers = len([job for job in self.queue if job.get_status() not in [St.COMPLETED,
+                                                                                          St.HOLDING,
+                                                                                          St.CANCELLED]])
             holding_jobs = [job.get_id() for job in self.queue if job.get_status() == St.HOLDING]
             if occupied_workers <= self.workers_num and len(holding_jobs) > 0:
                 # Create as much workers as nedded or possible
@@ -217,13 +178,11 @@ class HPC_Multiprocess():
                     job = Job.find_by_id(job_id)
                     job.set_worker(worker_id)
                     job.set_status(St.SUBMITTED)
-            # [print('QUEUE', job.get_id(), job.get_status(), job.get_worker(), sep=' ') for job in self.queue]
-            # print('Queue:', len(self.queue),'Completed:',len(completed), sep=' ')
             time.sleep(self.timeout)
-        # [print('COMP', job, sep=' ') for job in completed]
-# =============================================================================
-# Support methods
-# =============================================================================
+
+    # =============================================================================
+    # Support methods
+    # =============================================================================
     @staticmethod
     def create_file_list(path):
         file_list = list()
