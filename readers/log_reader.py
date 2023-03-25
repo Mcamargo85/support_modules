@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import gzip
-import zipfile as zf
-import os
 import itertools as it
-import pm4py
+import os
+import zipfile as zf
+from datetime import timedelta
+from operator import itemgetter
 
 import pandas as pd
-from operator import itemgetter
-from datetime import datetime, timedelta
+from pm4py import read_xes
 
 import utils.support as sup
 
@@ -49,7 +49,7 @@ class LogReader(object):
 # =============================================================================
 
     def get_xes_events_data(self):
-        temp_data = pm4py.read_xes(self.input)
+        temp_data = read_xes(self.input)
         try:
             source = temp_data.attributes['source']
         except:
