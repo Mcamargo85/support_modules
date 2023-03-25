@@ -44,9 +44,9 @@ class LogReader(object):
         elif self.file_extension == '.csv':
             self.get_csv_events_data()
 
-# =============================================================================
-# xes methods
-# =============================================================================
+    # =============================================================================
+    # xes methods
+    # =============================================================================
 
     def get_xes_events_data(self):
         temp_data = read_xes(self.input)
@@ -64,9 +64,9 @@ class LogReader(object):
             ['Start', 'End', 'start', 'end'])].reset_index(drop=True))
         temp_data = (
             temp_data[temp_data.event_type.isin(['start', 'complete'])]
-            .reset_index(drop=True))
+                .reset_index(drop=True))
         if source == 'com.qbpsimulator':
-            if len(temp_data.iloc[0].elementId.split('_'))>1: 
+            if len(temp_data.iloc[0].elementId.split('_')) > 1:
                 temp_data['etype'] = temp_data.apply(
                     lambda x: x.elementId.split('_')[0], axis=1)
                 temp_data = (
@@ -81,7 +81,7 @@ class LogReader(object):
         self.append_csv_start_end()
         if self.verbose:
             sup.print_done_task()
-    
+
     def reorder_xes(self, temp_data):
         """
         this method match the duplicated events on the .xes log
@@ -98,32 +98,36 @@ class LogReader(object):
         else:
             self.column_names['Start Timestamp'] = 'start_timestamp'
             self.column_names['Complete Timestamp'] = 'end_timestamp'
-            for caseid, group in  temp_data.groupby(by=['caseid']):
+            for caseid, group in temp_data.groupby(by=['caseid']):
                 trace = group.to_dict('records')
                 temp_trace = list()
-                for i in range(0, len(trace)-1):
-                    incomplete = False
+                for i in range(0, len(trace) - 1):
                     if trace[i]['event_type'] == 'start':
                         c_task_name = trace[i]['task']
-                        remaining = trace[i+1:]
-                        complete_event = next((event for event in remaining if (event['task'] == c_task_name and event['event_type'] == 'complete')), None)
+                        remaining = trace[i + 1:]
+                        complete_event = next((event for event in remaining if
+                                               (event['task'] == c_task_name and event['event_type'] == 'complete')),
+                                              None)
                         if complete_event:
                             temp_trace.append(
                                 {'caseid': caseid,
-                                  'task': trace[i]['task'],
-                                  'user': trace[i]['user'],
-                                  'start_timestamp': trace[i]['timestamp'],
-                                  'end_timestamp': complete_event['timestamp']})
+                                 'task': trace[i]['task'],
+                                 'user': trace[i]['user'],
+                                 'start_timestamp': trace[i]['timestamp'],
+                                 'end_timestamp': complete_event['timestamp']})
                         else:
-                            incomplete = True
-                            break
-                if not incomplete:
-                    ordered_event_log.extend(temp_trace)
+                            temp_trace.append(
+                                {'caseid': caseid,
+                                 'task': trace[i]['task'],
+                                 'user': trace[i]['user'],
+                                 'start_timestamp': trace[i]['timestamp'],
+                                 'end_timestamp': trace[i]['timestamp']})
+                ordered_event_log.extend(temp_trace)
         return ordered_event_log
 
-# =============================================================================
-# csv methods
-# =============================================================================
+    # =============================================================================
+    # csv methods
+    # =============================================================================
     def get_csv_events_data(self):
         """
         reads and parse all the events information from a csv file
@@ -187,9 +191,9 @@ class LogReader(object):
         end_start_times = dict()
         for case, group in pd.DataFrame(self.data).groupby('caseid'):
             end_start_times[(case, 'Start')] = (
-                group.start_timestamp.min()-timedelta(microseconds=1))
+                    group.start_timestamp.min() - timedelta(microseconds=1))
             end_start_times[(case, 'End')] = (
-                group.end_timestamp.max()+timedelta(microseconds=1))
+                    group.end_timestamp.max() + timedelta(microseconds=1))
         new_data = list()
         data = sorted(self.data, key=lambda x: x['caseid'])
         for key, group in it.groupby(data, key=lambda x: x['caseid']):
@@ -210,9 +214,9 @@ class LogReader(object):
             new_data.extend(trace)
         self.data = new_data
 
-# =============================================================================
-# Accesssor methods
-# =============================================================================
+    # =============================================================================
+    # Accesssor methods
+    # =============================================================================
     def get_traces(self):
         """
         returns the data splitted by caseid and ordered by start_timestamp
@@ -246,9 +250,9 @@ class LogReader(object):
         """
         self.data = data
 
-# =============================================================================
-# Support Method
-# =============================================================================
+    # =============================================================================
+    # Support Method
+    # =============================================================================
     def define_ftype(self):
         filename, file_extension = os.path.splitext(self.input)
         if file_extension in ['.xes', '.csv', '.mxml']:
