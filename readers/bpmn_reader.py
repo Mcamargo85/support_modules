@@ -2,7 +2,7 @@
 import xml.etree.ElementTree as ET
 
 
-class BpmnReader(object):
+class BpmnReader:
     """
     This class reads and parse the elements of a given bpmn 2.0 model
     """

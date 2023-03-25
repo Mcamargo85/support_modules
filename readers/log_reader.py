@@ -10,6 +10,7 @@ import pandas as pd
 from pm4py import read_xes
 
 import utils.support as sup
+import xml.etree.ElementTree as ET
 
 
 class LogReader(object):
@@ -49,11 +50,14 @@ class LogReader(object):
     # =============================================================================
 
     def get_xes_events_data(self):
+        tree = ET.parse(self.input)
+        root = tree.getroot()
+        source = ''
+        for attribute in root.findall(".//string[@key]"):
+            if 'source' == attribute.attrib.get('key'):
+                source = attribute.get('value')
+                break
         temp_data = read_xes(self.input)
-        try:
-            source = temp_data.attributes['source']
-        except:
-            source = ''
         temp_data.rename(columns={
             'case:concept:name': 'caseid',
             'concept:name': 'task',
@@ -62,15 +66,11 @@ class LogReader(object):
             'time:timestamp': 'timestamp'}, inplace=True)
         temp_data = (temp_data[~temp_data.task.isin(
             ['Start', 'End', 'start', 'end'])].reset_index(drop=True))
-        temp_data = (
-            temp_data[temp_data.event_type.isin(['start', 'complete'])]
-                .reset_index(drop=True))
+        temp_data = temp_data[temp_data.event_type.isin(['start', 'complete'])].reset_index(drop=True)
         if source == 'com.qbpsimulator':
             if len(temp_data.iloc[0].elementId.split('_')) > 1:
-                temp_data['etype'] = temp_data.apply(
-                    lambda x: x.elementId.split('_')[0], axis=1)
-                temp_data = (
-                    temp_data[temp_data.etype.isin(['Task', 'Activity'])].reset_index(drop=True))
+                temp_data['etype'] = temp_data.apply(lambda x: x.elementId.split('_')[0], axis=1)
+                temp_data = temp_data[temp_data.etype.isin(['Task', 'Activity'])].reset_index(drop=True)
         self.raw_data = temp_data.to_dict('records')
         if self.verbose:
             sup.print_performed_task('Rearranging log traces ')
