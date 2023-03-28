@@ -21,8 +21,8 @@ import jellyfish as jf
 from scipy.optimize import linear_sum_assignment
 from scipy.stats import wasserstein_distance
 
-from analyzers import alpha_oracle as ao
-from analyzers.alpha_oracle import Rel
+from src.analyzers import alpha_oracle as ao
+from src.analyzers.alpha_oracle import Rel
 
 
 class SimilarityEvaluator():
