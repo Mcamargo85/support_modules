@@ -1,6 +1,6 @@
 numpy
 networkx
-pm4py
+pm4py==2.6.1
 pandas
 matplotlib
 jellyfish
