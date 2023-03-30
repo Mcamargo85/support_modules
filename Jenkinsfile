@@ -25,7 +25,7 @@ pipeline {
             steps {
                 ansiColor('xterm') {
                     script{
-                        docker.image("python:3.8-slim").inside('-v coverage_results:coverage_results'){
+                        docker.image("python:3.8-slim").inside('-v /var/jenkins_home/workspace/coverage_results:coverage_results'){
                             sh '''#!/usr/bin/env bash
                             pip install --user -r requirements.txt
                             pip install --user -r tests/requirements.txt
@@ -50,7 +50,7 @@ pipeline {
                             -Dsonar.sources=src \
                             -Dsonar.branch.name=ci_cd \
                             -Dsonar.branch.target=ci_cd \
-                            -Dsonar.python.coverage.reportPaths=coverage_results/coverage.xml'''
+                            -Dsonar.python.coverage.reportPaths=/var/jenkins_home/workspace/coverage_results/coverage.xml'''
                         }
                     }
                 }
