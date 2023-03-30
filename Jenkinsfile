@@ -37,18 +37,17 @@ pipeline {
                 }
             }
         }
-        
+
         stage('SonarQube analysis') {
             steps {
                 ansiColor('xterm') {
                     script{
                         def scannerHome = tool 'SonarQubeScanner';
                         withSonarQubeEnv('SonarCloud') {
-                            sh '''${scannerHome}/bin/sonar-scanner
+                            sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner
                             -Dsonar.organization=mcamargo85
                             -Dsonar.projectKey=Mcamargo85_support_modules
-                            -Dsonar.sources=/src
-                            -Dsonar.host.url=https://sonarcloud.io'''
+                            -Dsonar.sources=/src'''
                         }
                     }
                 }
