@@ -30,8 +30,8 @@ pipeline {
                             pip install --user -r requirements.txt
                             pip install --user -r tests/requirements.txt
                             export PYSPARK_HOME=/usr/local/bin/python
-                            export PYTHONPATH=test:src
-                            python -m pytest --cov=src -vv test/'''
+                            export PYTHONPATH=tests:src
+                            python -m pytest --cov=src -vv tests/'''
                         }
                     }
                 }
