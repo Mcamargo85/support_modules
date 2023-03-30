@@ -16,7 +16,7 @@ class TestLogReader(TestCase):
                     'one_timestamp': False,
                     'filter_d_attrib': True}
 
-        log = LogReader(os.path.join('fixtures', 'PurchasingExample.xes'), settings)
+        log = LogReader(os.path.join('tests', 'fixtures', 'PurchasingExample.xes'), settings)
         df = pd.DataFrame(log.data)
         self.assertEqual(len(df.columns), 5)
         self.assertEqual(len(df), 10335)
