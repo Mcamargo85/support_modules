@@ -25,13 +25,13 @@ pipeline {
             steps {
                 ansiColor('xterm') {
                     script{
-                        docker.image("python:3.8-slim").inside('-v /var/jenkins_home/workspace/coverage_results:coverage_results'){
+                        docker.image("python:3.8-slim").inside('-v /var/jenkins_home/workspace/coverage_results:/coverage_results'){
                             sh '''#!/usr/bin/env bash
                             pip install --user -r requirements.txt
                             pip install --user -r tests/requirements.txt
                             export PYSPARK_HOME=/usr/local/bin/python
                             export PYTHONPATH=tests:src
-                            python -m pytest --cov-report=xml:coverage_results/coverage.xml --cov=src -vv tests'''
+                            python -m pytest --cov-report=xml:/coverage_results/coverage.xml --cov=src -vv tests'''
                         }
                     }
                 }

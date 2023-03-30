@@ -1,4 +1,4 @@
-FROM python:3.7.13-slim-buster
+FROM python:3.8-slim
 
 RUN set -ex; \
     addgroup --system --gid 1002 jenkins; \
