@@ -44,7 +44,12 @@ pipeline {
                     script{
                         def scannerHome = tool 'SonarQubeScanner';
                         withSonarQubeEnv('SonarCloud') {
-                            sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner -Dsonar.organization=mcamargo85 -Dsonar.projectKey=Mcamargo85_support_modules -Dsonar.sources=. '''
+                            sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
+                            -Dsonar.organization=mcamargo85 \
+                            -Dsonar.projectKey=Mcamargo85_support_modules \
+                            -Dsonar.sources=src \
+                            -Dsonar.branch.name=ci_cd \
+                            -Dsonar.branch.target=ci_cd'''
                         }
                     }
                 }
