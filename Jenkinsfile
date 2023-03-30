@@ -13,7 +13,7 @@ pipeline {
                 ansiColor('xterm'){
                     script{
                         docker.build(
-                            "python:3.7.13-slim-buster-jre",
+                            "python:3.8-slim",
                             "--pull -f baseimage/Dockerfile ."
                         )
                     }
@@ -25,13 +25,13 @@ pipeline {
             steps {
                 ansiColor('xterm') {
                     script{
-                        docker.image("python:3.7.13-slim-buster-jre").inside(){
+                        docker.image("python:3.8-slim").inside(){
                             sh '''#!/usr/bin/env bash
                             pip install --user -r requirements.txt
                             pip install --user -r test/requirements.txt
                             export PYSPARK_HOME=/usr/local/bin/python
                             export PYTHONPATH=test:src
-                            python -m pytest --cov=parquet_converters -vv test/'''
+                            python -m pytest --cov=src -vv test/'''
                         }
                     }
                 }
