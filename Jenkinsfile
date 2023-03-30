@@ -38,9 +38,13 @@ pipeline {
             }
         }
         stage('SonarQube analysis') {
-            def scannerHome = tool 'SonarScanner 4.7';
-            withSonarQubeEnv('SonarCloud') { // If you have configured more than one global server connection, you can specify its name
-                sh "${scannerHome}/bin/sonar-scanner"
+            steps {
+                ansiColor('xterm') {
+                    def scannerHome = tool 'SonarScanner 4.7';
+                    withSonarQubeEnv('SonarCloud') {
+                        sh "${scannerHome}/bin/sonar-scanner"
+                    }
+                }
             }
         }
     }
