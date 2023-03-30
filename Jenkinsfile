@@ -52,7 +52,6 @@ pipeline {
                             -Dsonar.projectKey=Mcamargo85_support_modules \
                             -Dsonar.sources=src \
                             -Dsonar.branch.name=${BRANCH_NAME} \
-                            -Dsonar.branch.target=${BRANCH_NAME} \
                             -Dsonar.python.coverage.reportPaths=coverage.xml'''
                         }
                     }
