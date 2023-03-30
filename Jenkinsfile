@@ -1,5 +1,8 @@
 pipeline {
     agent any
+    environment {
+        BRANCH_NAME = "${env.BRANCH_NAME}"
+    }
     options {
         disableConcurrentBuilds()
         buildDiscarder(logRotator(daysToKeepStr: '30', numToKeepStr: '10'))
@@ -48,8 +51,8 @@ pipeline {
                             -Dsonar.organization=mcamargo85 \
                             -Dsonar.projectKey=Mcamargo85_support_modules \
                             -Dsonar.sources=src \
-                            -Dsonar.branch.name=ci_cd \
-                            -Dsonar.branch.target=ci_cd \
+                            -Dsonar.branch.name=${BRANCH_NAME} \
+                            -Dsonar.branch.target=${BRANCH_NAME} \
                             -Dsonar.python.coverage.reportPaths=coverage.xml'''
                         }
                     }
