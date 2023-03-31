@@ -5,7 +5,7 @@ setup(name='support_modules',
       description='support module with utility functions',
       author='Manuel Camargo',
       url='https://github.com/Mcamargo85/support_modules',
-      packages=find_packages(where='src'),
+      packages=['src.utils', 'src.readers', 'src.tests', 'src.analyzers'],
       install_requires=[
         'numpy',
         'networkx',
