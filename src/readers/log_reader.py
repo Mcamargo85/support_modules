@@ -190,10 +190,8 @@ class LogReader(object):
     def append_csv_start_end(self):
         end_start_times = dict()
         for case, group in pd.DataFrame(self.data).groupby('caseid'):
-            end_start_times[(case, 'Start')] = (
-                    group.start_timestamp.min() - timedelta(microseconds=1))
-            end_start_times[(case, 'End')] = (
-                    group.end_timestamp.max() + timedelta(microseconds=1))
+            end_start_times[(case, 'Start')] = (group.start_timestamp.min() - timedelta(microseconds=1))
+            end_start_times[(case, 'End')] = (group.end_timestamp.max() + timedelta(microseconds=1))
         new_data = list()
         data = sorted(self.data, key=lambda x: x['caseid'])
         for key, group in it.groupby(data, key=lambda x: x['caseid']):
@@ -225,9 +223,7 @@ class LogReader(object):
         traces = list()
         for case in cases:
             order_key = 'end_timestamp' if self.one_timestamp else 'start_timestamp'
-            trace = sorted(
-                list(filter(lambda x: (x['caseid'] == case), self.data)),
-                key=itemgetter(order_key))
+            trace = sorted(list(filter(lambda x, y=case: x['caseid'] == y, self.data)), key=itemgetter(order_key))
             traces.append(trace)
         return traces
 
@@ -238,9 +234,7 @@ class LogReader(object):
         cases = list(set([c['caseid'] for c in self.raw_data]))
         traces = list()
         for case in cases:
-            trace = sorted(
-                list(filter(lambda x: (x['caseid'] == case), self.raw_data)),
-                key=itemgetter('timestamp'))
+            trace = sorted(list(filter(lambda x, y=case: x['caseid'] == y, self.raw_data)), key=itemgetter('timestamp'))
             traces.append(trace)
         return traces
 
@@ -257,10 +251,8 @@ class LogReader(object):
         filename, file_extension = os.path.splitext(self.input)
         if file_extension in ['.xes', '.csv', '.mxml']:
             filename = filename + file_extension
-            file_extension = file_extension
         elif file_extension == '.gz':
-            outFileName = filename
-            filename, file_extension = self.decompress_file_gzip(outFileName)
+            filename, file_extension = self.decompress_file_gzip(filename)
         elif file_extension == '.zip':
             filename, file_extension = self.decompress_file_zip(filename)
         else:
@@ -268,18 +260,18 @@ class LogReader(object):
         return filename, file_extension
 
     # Decompress .gz files
-    def decompress_file_gzip(self, outFileName):
-        inFile = gzip.open(self.input, 'rb')
-        outFile = open(outFileName, 'wb')
-        outFile.write(inFile.read())
-        inFile.close()
-        outFile.close()
-        _, fileExtension = os.path.splitext(outFileName)
-        return outFileName, fileExtension
+    def decompress_file_gzip(self, out_file_name):
+        in_file = gzip.open(self.input, 'rb')
+        out_file = open(out_file_name, 'wb')
+        out_file.write(in_file.read())
+        in_file.close()
+        out_file.close()
+        _, file_extension = os.path.splitext(out_file_name)
+        return out_file_name, file_extension
 
     # Decompress .zip files
-    def decompress_file_zip(self, outfilename):
+    def decompress_file_zip(self, out_file_name):
         with zf.ZipFile(self.input, "r") as zip_ref:
             zip_ref.extractall("../inputs/")
-        _, fileExtension = os.path.splitext(outfilename)
-        return outfilename, fileExtension
+        _, file_extension = os.path.splitext(out_file_name)
+        return out_file_name, file_extension
