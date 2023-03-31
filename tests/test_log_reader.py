@@ -11,6 +11,7 @@ class TestLogReader(TestCase):
     @parameterized.expand([
         ['purchasing_example', 'PurchasingExample.xes', 5, 10335],
         ['confidential_1000', 'confidential_1000.xes', 5, 26886],
+        ['event_log', 'event_log.csv', 5, 2157]
     ])
     def test_load_data_from_file(self, _name, event_log, cols, rows):
         # Event log reading
