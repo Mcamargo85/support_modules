@@ -9,7 +9,7 @@ import subprocess
 import re
 import os
 import time
-import src.utils.support as sup
+import utils.support as sup
 import numpy as np
 import shutil
 from collections import defaultdict

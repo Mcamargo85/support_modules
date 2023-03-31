@@ -9,7 +9,7 @@ from operator import itemgetter
 import pandas as pd
 from pm4py import read_xes
 
-import src.utils.support as sup
+import utils.support as sup
 import xml.etree.ElementTree as ET
 
 
