@@ -47,12 +47,24 @@ pipeline {
                     script{
                         def scannerHome = tool 'SonarQubeScanner';
                         withSonarQubeEnv('SonarCloud') {
-                            sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
-                            -Dsonar.organization=mcamargo85 \
-                            -Dsonar.projectKey=Mcamargo85_support_modules \
-                            -Dsonar.sources=src \
-                            -Dsonar.branch.name=${BRANCH_NAME} \
-                            -Dsonar.python.coverage.reportPaths=coverage.xml'''
+                            sh '''
+                            if [${BRANCH_NAME}="master"]
+                            then
+                                /var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
+                                -Dsonar.organization=mcamargo85 \
+                                -Dsonar.projectKey=Mcamargo85_support_modules \
+                                -Dsonar.sources=src \
+                                -Dsonar.branch.name=${BRANCH_NAME} \
+                                -Dsonar.python.coverage.reportPaths=coverage.xml
+                            else
+                                /var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
+                                -Dsonar.organization=mcamargo85 \
+                                -Dsonar.projectKey=Mcamargo85_support_modules \
+                                -Dsonar.sources=src \
+                                -Dsonar.branch.name=${BRANCH_NAME} \
+                                -Dsonar.branch.target=${BRANCH_NAME} \
+                                -Dsonar.python.coverage.reportPaths=coverage.xml
+                            fi'''
                         }
                     }
                 }
