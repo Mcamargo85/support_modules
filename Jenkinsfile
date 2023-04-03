@@ -44,32 +44,66 @@ pipeline {
             }
         }
 
-        stage('SonarQube analysis') {
+        stage('PR SonarQube analysis') {
+            when { changeRequest() }
             steps {
                 ansiColor('xterm') {
-                    script{
+                    script {
                         def scannerHome = tool 'SonarQubeScanner';
-                        if (BRANCH_NAME == 'master') {
-                            withSonarQubeEnv('SonarCloud') {
-                                sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
-                                    -Dsonar.organization=mcamargo85 \
-                                    -Dsonar.projectKey=Mcamargo85_support_modules \
-                                    -Dsonar.sources=src \
-                                    -Dsonar.branch.name=${BRANCH_NAME} \
-                                    -Dsonar.python.coverage.reportPaths=coverage.xml'''
-                            }
-                        } else {
-                            withSonarQubeEnv('SonarCloud') {
-                                sh "git fetch origin ${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}"
-                                sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
-                                    -Dsonar.organization=mcamargo85 \
-                                    -Dsonar.projectKey=Mcamargo85_support_modules \
-                                    -Dsonar.sources=src \
-                                    -Dsonar.pullrequest.key=${CHANGE_ID} \
-                                    -Dsonar.pullrequest.branch=${CHANGE_BRANCH} \
-                                    -Dsonar.pullrequest.base=${CHANGE_TARGET} \
-                                    -Dsonar.python.coverage.reportPaths=coverage.xml'''
-                            }
+                        withSonarQubeEnv('SonarCloud')
+                        {
+                            sh "git fetch origin ${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}"
+                            sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
+                                -Dsonar.organization=mcamargo85 \
+                                -Dsonar.projectKey=Mcamargo85_support_modules \
+                                -Dsonar.sources=src \
+                                -Dsonar.pullrequest.key=${CHANGE_ID} \
+                                -Dsonar.pullrequest.branch=${CHANGE_BRANCH} \
+                                -Dsonar.pullrequest.base=${CHANGE_TARGET} \
+                                -Dsonar.python.coverage.reportPaths=coverage.xml'''
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Main branch SonarQube analysis') {
+            when { allOf { not { changeRequest() }; branch 'master'} }
+            steps {
+                ansiColor('xterm') {
+                    script {
+                        def scannerHome = tool 'SonarQubeScanner';
+                        withSonarQubeEnv('SonarCloud')
+                        {
+                            sh "git fetch origin ${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}"
+                            sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
+                                -Dsonar.organization=mcamargo85 \
+                                -Dsonar.projectKey=Mcamargo85_support_modules \
+                                -Dsonar.sources=src \
+                                -Dsonar.branch.name=${BRANCH_NAME} \
+                                -Dsonar.python.coverage.reportPaths=coverage.xml'''
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Branch SonarQube analysis') {
+            when { allOf { not { changeRequest() }; not { branch 'master' } } }
+            steps {
+                ansiColor('xterm') {
+                    script {
+                        def scannerHome = tool 'SonarQubeScanner';
+                        withSonarQubeEnv('SonarCloud')
+                        {
+                            sh "git fetch origin ${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}"
+                            sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
+                                -Dsonar.organization=mcamargo85 \
+                                -Dsonar.projectKey=Mcamargo85_support_modules \
+                                -Dsonar.sources=src \
+                                -Dsonar.branch.name=${BRANCH_NAME} \
+                                -Dsonar.branch.target=${BRANCH_NAME} \
+                                -Dsonar.python.coverage.reportPaths=coverage.xml'''
                         }
                     }
                 }
