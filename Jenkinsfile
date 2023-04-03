@@ -37,9 +37,6 @@ pipeline {
                             python -m pytest --cov-report=xml:coverage.xml --cov=src -vv tests'''
                         }
                     }
-                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                        sh "exit 1"
-                    }
                 }
             }
         }
@@ -69,9 +66,6 @@ pipeline {
                                     -Dsonar.python.coverage.reportPaths=coverage.xml'''
                                  }
                         }
-                    }
-                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
-                        sh "exit 1"
                     }
                 }
             }
