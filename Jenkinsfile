@@ -60,13 +60,14 @@ pipeline {
                             }
                         } else {
                             withSonarQubeEnv('SonarCloud') {
+                                sh "git fetch origin ${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}"
                                 sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
                                     -Dsonar.organization=mcamargo85 \
                                     -Dsonar.projectKey=Mcamargo85_support_modules \
                                     -Dsonar.sources=src \
                                     -Dsonar.pullrequest.key=${CHANGE_ID} \
                                     -Dsonar.pullrequest.branch=${CHANGE_BRANCH} \
-                                    -Dsonar.pullrequest.base=${BRANCH_NAME} \
+                                    -Dsonar.pullrequest.base=${CHANGE_TARGET} \
                                     -Dsonar.python.coverage.reportPaths=coverage.xml'''
                             }
                         }
