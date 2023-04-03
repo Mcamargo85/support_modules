@@ -37,6 +37,9 @@ pipeline {
                             python -m pytest --cov-report=xml:coverage.xml --cov=src -vv tests'''
                         }
                     }
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        sh "exit 1"
+                    }
                 }
             }
         }
@@ -67,27 +70,11 @@ pipeline {
                                  }
                         }
                     }
+                    catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                        sh "exit 1"
+                    }
                 }
             }
         }
     }
-    post{
-        success{
-            setBuildStatus("Build succeeded", "SUCCESS");
-        }
-
-        failure {
-            setBuildStatus("Build failed", "FAILURE");
-        }
-    }
-}
-
-void setBuildStatus(String message, String state) {
-    step([
-        $class: "GitHubCommitStatusSetter",
-        reposSource: [$class: "ManuallyEnteredRepositorySource", url: "https://github.com/Mcamargo85/support_modules"],
-        contextSource: [$class: "ManuallyEnteredCommitContextSource", context: "ci/jenkins/build-status"],
-        errorHandlers: [[$class: "ChangingBuildStatusErrorHandler", result: "UNSTABLE"]],
-        statusResultSource: [$class: "ConditionalStatusResultSource", results: [[$class: "AnyBuildResult", message: message, state: state]]]
-    ]);
 }
