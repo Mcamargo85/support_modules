@@ -9,17 +9,18 @@ import pandas as pd
 class TestLogReader(TestCase):
 
     @parameterized.expand([
-        ['purchasing_example', 'PurchasingExample.xes', 5, 10335],
-        ['confidential_1000', 'confidential_1000.xes', 5, 26886],
-        ['event_log', 'event_log.csv', 5, 2157]
+        ['purchasing_example', 'PurchasingExample.xes', 5, 10335, False, '%Y-%m-%dT%H:%M:%S.%f'],
+        ['confidential_1000', 'confidential_1000.xes', 5, 26886, False, '%Y-%m-%dT%H:%M:%S.%f'],
+        ['bpi_2012_no_start_timestamp', 'BPI_2012_no_start_timestamp.csv', 4, 24, True, '%Y-%m-%d %H:%M:%S.%f'],
+        ['event_log', 'event_log.csv', 5, 2157, False, '%Y-%m-%d %H:%M:%S.%f']
     ])
-    def test_load_data_from_file(self, _name, event_log, cols, rows):
+    def test_load_data_from_file(self, _name, event_log, cols, rows, one_ts, time_format):
         # Event log reading
         column_names = {'Case ID': 'caseid', 'Activity': 'task',
                         'lifecycle:transition': 'event_type', 'Resource': 'user'}
-        settings = {'timeformat': '%Y-%m-%dT%H:%M:%S.%f',
+        settings = {'timeformat': time_format,
                     'column_names': column_names,
-                    'one_timestamp': False,
+                    'one_timestamp': one_ts,
                     'filter_d_attrib': True}
 
         log = LogReader(os.path.join('tests', 'fixtures', event_log), settings)
