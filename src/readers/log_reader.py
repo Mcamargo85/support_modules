@@ -190,7 +190,10 @@ class LogReader(object):
     def append_csv_start_end(self):
         end_start_times = dict()
         for case, group in pd.DataFrame(self.data).groupby('caseid'):
-            end_start_times[(case, 'Start')] = (group.start_timestamp.min() - timedelta(microseconds=1))
+            if self.one_timestamp:
+                end_start_times[(case, 'Start')] = (group.end_timestamp.min() - timedelta(microseconds=1))
+            else:
+                end_start_times[(case, 'Start')] = (group.start_timestamp.min() - timedelta(microseconds=1))
             end_start_times[(case, 'End')] = (group.end_timestamp.max() + timedelta(microseconds=1))
         new_data = list()
         data = sorted(self.data, key=lambda x: x['caseid'])
