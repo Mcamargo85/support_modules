@@ -47,24 +47,23 @@ pipeline {
                     script{
                         def scannerHome = tool 'SonarQubeScanner';
                         withSonarQubeEnv('SonarCloud') {
-                            sh '''
-                            if [${BRANCH_NAME}=master]
-                            then
-                                /var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
+                            if (${BRANCH_NAME}='master') {
+                            sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
                                 -Dsonar.organization=mcamargo85 \
                                 -Dsonar.projectKey=Mcamargo85_support_modules \
                                 -Dsonar.sources=src \
                                 -Dsonar.branch.name=${BRANCH_NAME} \
-                                -Dsonar.python.coverage.reportPaths=coverage.xml
-                            else
-                                /var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
+                                -Dsonar.python.coverage.reportPaths=coverage.xml'''
+                            }
+                            else {
+                             sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
                                 -Dsonar.organization=mcamargo85 \
                                 -Dsonar.projectKey=Mcamargo85_support_modules \
                                 -Dsonar.sources=src \
                                 -Dsonar.branch.name=${BRANCH_NAME} \
                                 -Dsonar.branch.target=${BRANCH_NAME} \
-                                -Dsonar.python.coverage.reportPaths=coverage.xml
-                            fi'''
+                                -Dsonar.python.coverage.reportPaths=coverage.xml'''
+                            }
                         }
                     }
                 }
