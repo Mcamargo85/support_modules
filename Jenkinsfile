@@ -48,7 +48,7 @@ pipeline {
                         def scannerHome = tool 'SonarQubeScanner';
                         withSonarQubeEnv('SonarCloud') {
                             sh '''
-                            if [${BRANCH_NAME}="master"]
+                            if [${BRANCH_NAME}=master]
                             then
                                 /var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
                                 -Dsonar.organization=mcamargo85 \
