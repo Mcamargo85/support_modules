@@ -45,8 +45,8 @@ pipeline {
         }
 
         stage('PR SonarQube analysis') {
-            when { changeRequest() }
             steps {
+                when { changeRequest() }
                 ansiColor('xterm') {
                     script {
                         def scannerHome = tool 'SonarQubeScanner';
@@ -65,11 +65,8 @@ pipeline {
                     }
                 }
             }
-        }
-
-        stage('Main branch SonarQube analysis') {
-            when { allOf { not { changeRequest() }; branch 'master'} }
             steps {
+                when { allOf { not { changeRequest() }; branch 'master'} }
                 ansiColor('xterm') {
                     script {
                         def scannerHome = tool 'SonarQubeScanner';
@@ -86,11 +83,8 @@ pipeline {
                     }
                 }
             }
-        }
-
-        stage('Branch SonarQube analysis') {
-            when { allOf { not { changeRequest() }; not { branch 'master' } } }
             steps {
+                when { allOf { not { changeRequest() }; not { branch 'master' } } }
                 ansiColor('xterm') {
                     script {
                         def scannerHome = tool 'SonarQubeScanner';
