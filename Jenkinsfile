@@ -56,6 +56,7 @@ pipeline {
                                     -Dsonar.projectKey=Mcamargo85_support_modules \
                                     -Dsonar.sources=src \
                                     -Dsonar.branch.name=${BRANCH_NAME} \
+                                    -Dsonar.python.version=3.7, 3.8 \
                                     -Dsonar.python.coverage.reportPaths=coverage.xml'''
                                 }
                         } else {
@@ -67,6 +68,7 @@ pipeline {
                                     -Dsonar.pullrequest.key=${CHANGE_ID} \
                                     -Dsonar.pullrequest.branch=${CHANGE_BRANCH} \
                                     -Dsonar.pullrequest.base=${CHANGE_TARGET} \
+                                    -Dsonar.python.version=3.7, 3.8 \
                                     -Dsonar.python.coverage.reportPaths=coverage.xml'''
                                  }
                         }
