@@ -46,7 +46,7 @@ pipeline {
                 ansiColor('xterm') {
                     script{
                         def scannerHome = tool 'SonarQubeScanner';
-                        if (${BRANCH_NAME} == 'master') {
+                        if (BRANCH_NAME == 'master') {
                             withSonarQubeEnv('SonarCloud') {
                                 sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
                                     -Dsonar.organization=mcamargo85 \
