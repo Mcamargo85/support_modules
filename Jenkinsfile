@@ -2,6 +2,9 @@ pipeline {
     agent any
     environment {
         BRANCH_NAME = "${env.BRANCH_NAME}"
+        CHANGE_ID = "${env.CHANGE_ID}"
+        CHANGE_TARGET = "${env.CHANGE_TARGET}"
+        CHANGE_BRANCH = "${env.CHANGE_BRANCH}"
     }
     options {
         disableConcurrentBuilds()
@@ -61,8 +64,9 @@ pipeline {
                                     -Dsonar.organization=mcamargo85 \
                                     -Dsonar.projectKey=Mcamargo85_support_modules \
                                     -Dsonar.sources=src \
-                                    -Dsonar.branch.name=${BRANCH_NAME} \
-                                    -Dsonar.branch.target=${BRANCH_NAME} \
+                                    -Dsonar.pullrequest.key=${CHANGE_ID} \
+                                    -Dsonar.pullrequest.branch=${CHANGE_BRANCH} \
+                                    -Dsonar.pullrequest.base=${CHANGE_TARGET} \
                                     -Dsonar.python.coverage.reportPaths=coverage.xml'''
                                  }
                         }
