@@ -199,21 +199,24 @@ class LogReader(object):
         data = sorted(self.data, key=lambda x: x['caseid'])
         for key, group in it.groupby(data, key=lambda x: x['caseid']):
             trace = list(group)
-            for new_event in ['Start', 'End']:
-                idx = 0 if new_event == 'Start' else -1
-                temp_event = dict()
-                temp_event['caseid'] = trace[idx]['caseid']
-                temp_event['task'] = new_event
-                temp_event['user'] = new_event
-                temp_event['end_timestamp'] = end_start_times[(key, new_event)]
-                if not self.one_timestamp:
-                    temp_event['start_timestamp'] = end_start_times[(key, new_event)]
-                if new_event == 'Start':
-                    trace.insert(0, temp_event)
-                else:
-                    trace.append(temp_event)
+            self._create_dummy_events(end_start_times, key, trace)
             new_data.extend(trace)
         self.data = new_data
+
+    def _create_dummy_events(self, end_start_times, key, trace):
+        for new_event in ['Start', 'End']:
+            idx = 0 if new_event == 'Start' else -1
+            temp_event = dict()
+            temp_event['caseid'] = trace[idx]['caseid']
+            temp_event['task'] = new_event
+            temp_event['user'] = new_event
+            temp_event['end_timestamp'] = end_start_times[(key, new_event)]
+            if not self.one_timestamp:
+                temp_event['start_timestamp'] = end_start_times[(key, new_event)]
+            if new_event == 'Start':
+                trace.insert(0, temp_event)
+            else:
+                trace.append(temp_event)
 
     # =============================================================================
     # Accesssor methods
