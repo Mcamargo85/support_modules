@@ -66,7 +66,7 @@ pipeline {
                                     -Dsonar.sources=src \
                                     -Dsonar.pullrequest.key=${CHANGE_ID} \
                                     -Dsonar.pullrequest.branch=${CHANGE_BRANCH} \
-                                    -Dsonar.pullrequest.base=${CHANGE_TARGET} \
+                                    -Dsonar.pullrequest.base=${BRANCH_NAME} \
                                     -Dsonar.python.coverage.reportPaths=coverage.xml'''
                             }
                         }
