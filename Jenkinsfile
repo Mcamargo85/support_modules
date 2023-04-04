@@ -6,7 +6,7 @@ pipeline {
         CHANGE_TARGET = "${env.CHANGE_TARGET}"
         CHANGE_BRANCH = "${env.CHANGE_BRANCH}"
         MAIN_BRANCH = 'master'
-        LONG_LIVED_PATTERN = "release\\."
+        LONG_LIVED_PATTERN = "release.*"
     }
     options {
         disableConcurrentBuilds()
