@@ -111,7 +111,7 @@ pipeline {
         }
 
         stage('Short-lived branch SonarQube analysis') {
-            when { allOf { not { changeRequest() }; not { branch pattern: LONG_LIVED_PATTERN, comparator: "REGEXP" } } }
+            when { allOf { not { changeRequest() }; not { branch pattern: LONG_LIVED_PATTERN, comparator: "REGEXP" }; not { branch MAIN_BRANCH } } }
             steps {
                 ansiColor('xterm') {
                     script {
