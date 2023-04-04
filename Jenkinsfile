@@ -90,7 +90,7 @@ pipeline {
         }
 
         stage('Long-lived branch SonarQube analysis') {
-            when { allOf { not { changeRequest() }; { branch pattern: LONG_LIVED_PATTERN, comparator: "REGEXP" } } }
+            when { allOf { not { changeRequest() }; branch pattern: LONG_LIVED_PATTERN, comparator: "REGEXP" } }
             steps {
                 ansiColor('xterm') {
                     script {
