@@ -7,6 +7,7 @@ pipeline {
         CHANGE_BRANCH = "${env.CHANGE_BRANCH}"
         MAIN_BRANCH = 'master'
         LONG_LIVED_PATTERN = "release.*"
+        SONAR_QUBE_PLUGIN = "/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner"
     }
     options {
         disableConcurrentBuilds()
@@ -55,10 +56,7 @@ pipeline {
                         withSonarQubeEnv('SonarCloud')
                         {
                             sh "git fetch origin ${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}"
-                            sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
-                                -Dsonar.organization=mcamargo85 \
-                                -Dsonar.projectKey=Mcamargo85_support_modules \
-                                -Dsonar.sources=src \
+                            sh '''${SONAR_QUBE_PLUGIN} \
                                 -Dsonar.pullrequest.key=${CHANGE_ID} \
                                 -Dsonar.pullrequest.branch=${CHANGE_BRANCH} \
                                 -Dsonar.pullrequest.base=${CHANGE_TARGET} \
@@ -77,10 +75,7 @@ pipeline {
                         def scannerHome = tool 'SonarQubeScanner';
                         withSonarQubeEnv('SonarCloud')
                         {
-                            sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
-                                -Dsonar.organization=mcamargo85 \
-                                -Dsonar.projectKey=Mcamargo85_support_modules \
-                                -Dsonar.sources=src \
+                            sh '''${SONAR_QUBE_PLUGIN} \
                                 -Dsonar.branch.name=${BRANCH_NAME} \
                                 -Dsonar.python.coverage.reportPaths=coverage.xml'''
                         }
@@ -97,10 +92,7 @@ pipeline {
                         def scannerHome = tool 'SonarQubeScanner';
                         withSonarQubeEnv('SonarCloud')
                         {
-                            sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
-                                -Dsonar.organization=mcamargo85 \
-                                -Dsonar.projectKey=Mcamargo85_support_modules \
-                                -Dsonar.sources=src \
+                            sh '''${SONAR_QUBE_PLUGIN} \
                                 -Dsonar.branch.name=${BRANCH_NAME} \
                                 -Dsonar.branch.target=${MAIN_BRANCH} \
                                 -Dsonar.python.coverage.reportPaths=coverage.xml'''
@@ -118,10 +110,7 @@ pipeline {
                         def scannerHome = tool 'SonarQubeScanner';
                         withSonarQubeEnv('SonarCloud')
                         {
-                            sh '''/var/jenkins_home/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin/sonar-scanner \
-                                -Dsonar.organization=mcamargo85 \
-                                -Dsonar.projectKey=Mcamargo85_support_modules \
-                                -Dsonar.sources=src \
+                            sh '''${SONAR_QUBE_PLUGIN} \
                                 -Dsonar.branch.name=${BRANCH_NAME} \
                                 -Dsonar.branch.target=${BRANCH_NAME} \
                                 -Dsonar.python.coverage.reportPaths=coverage.xml'''
