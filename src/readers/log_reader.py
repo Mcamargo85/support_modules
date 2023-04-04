@@ -256,9 +256,10 @@ class LogReader(object):
     def define_ftype(self):
         filename, file_extension = os.path.splitext(self.input)
         if file_extension in ['.xes', '.csv', '.mxml']:
-            filename = filename + file_extension
+            filename = self.input
         elif file_extension == '.gz':
             filename, file_extension = self.decompress_file_gzip(filename)
+            self.input = filename
         elif file_extension == '.zip':
             filename, file_extension = self.decompress_file_zip(filename)
         else:
