@@ -94,6 +94,8 @@ class LogReader(object):
             ordered_event_log = temp_data.rename(
                 columns={'timestamp': 'end_timestamp'})
             ordered_event_log = ordered_event_log.drop(columns='event_type')
+            if self.filter_d_attrib:
+                ordered_event_log = ordered_event_log[['caseid', 'task', 'user', 'end_timestamp']]
             ordered_event_log = ordered_event_log.to_dict('records')
         else:
             self.column_names['Start Timestamp'] = 'start_timestamp'
