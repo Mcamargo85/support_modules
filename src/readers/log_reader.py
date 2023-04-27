@@ -100,32 +100,36 @@ class LogReader(object):
         else:
             self.column_names['Start Timestamp'] = 'start_timestamp'
             self.column_names['Complete Timestamp'] = 'end_timestamp'
-            for caseid, group in temp_data.groupby(by=['caseid']):
+            for caseid, group in temp_data.groupby('caseid'):
                 trace = group.to_dict('records')
                 temp_trace = list()
                 for i in range(0, len(trace) - 1):
                     if trace[i]['event_type'] == 'start':
-                        c_task_name = trace[i]['task']
-                        remaining = trace[i + 1:]
-                        complete_event = next((event for event in remaining if
-                                               (event['task'] == c_task_name and event['event_type'] == 'complete')),
-                                              None)
-                        if complete_event:
-                            temp_trace.append(
-                                {'caseid': caseid,
-                                 'task': trace[i]['task'],
-                                 'user': trace[i]['user'],
-                                 'start_timestamp': trace[i]['timestamp'],
-                                 'end_timestamp': complete_event['timestamp']})
-                        else:
-                            temp_trace.append(
-                                {'caseid': caseid,
-                                 'task': trace[i]['task'],
-                                 'user': trace[i]['user'],
-                                 'start_timestamp': trace[i]['timestamp'],
-                                 'end_timestamp': trace[i]['timestamp']})
+                        self._reorder_event(caseid, i, temp_trace, trace)
                 ordered_event_log.extend(temp_trace)
         return ordered_event_log
+
+    @staticmethod
+    def _reorder_event(caseid, i, temp_trace, trace):
+        c_task_name = trace[i]['task']
+        remaining = trace[i + 1:]
+        complete_event = next((event for event in remaining if
+                               (event['task'] == c_task_name and event['event_type'] == 'complete')),
+                              None)
+        if complete_event:
+            temp_trace.append(
+                {'caseid': caseid,
+                 'task': trace[i]['task'],
+                 'user': trace[i]['user'],
+                 'start_timestamp': trace[i]['timestamp'],
+                 'end_timestamp': complete_event['timestamp']})
+        else:
+            temp_trace.append(
+                {'caseid': caseid,
+                 'task': trace[i]['task'],
+                 'user': trace[i]['user'],
+                 'start_timestamp': trace[i]['timestamp'],
+                 'end_timestamp': trace[i]['timestamp']})
 
     # =============================================================================
     # csv methods
